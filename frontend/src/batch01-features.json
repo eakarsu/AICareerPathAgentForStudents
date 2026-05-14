@@ -1,0 +1,104 @@
+{
+  "project": "AICareerPathAgentForStudents",
+  "marker": "// === Batch 01 Gaps & Frontend Mounts ===",
+  "features": [
+    {
+      "slug": "agentic-career-coach-guiding-multi-week-journey-wi",
+      "component": "AgenticCareerCoachGuidingMultiWeekJourneyWiPage",
+      "label": "Agentic career coach guiding multi-week journey with weekly check-ins",
+      "endpoint": "/api/cf-agentic-career-coach-guiding-multi-week-journey-wi",
+      "kind": "cfs"
+    },
+    {
+      "slug": "rag-over-bls-data-and-local-employer-postings-for-",
+      "component": "RagOverBlsDataAndLocalEmployerPostingsForPage",
+      "label": "RAG over BLS data and local employer postings for personalized labor-market insights",
+      "endpoint": "/api/cf-rag-over-bls-data-and-local-employer-postings-for-",
+      "kind": "cfs"
+    },
+    {
+      "slug": "real-time-labor-market-trend-alerts-triggering-new",
+      "component": "RealTimeLaborMarketTrendAlertsTriggeringNewPage",
+      "label": "Real-time labor-market trend alerts triggering new career suggestions",
+      "endpoint": "/api/cf-real-time-labor-market-trend-alerts-triggering-new",
+      "kind": "cfs"
+    },
+    {
+      "slug": "white-label-deployment-for-school-districts-and-co",
+      "component": "WhiteLabelDeploymentForSchoolDistrictsAndCoPage",
+      "label": "White-label deployment for school districts and community colleges",
+      "endpoint": "/api/cf-white-label-deployment-for-school-districts-and-co",
+      "kind": "cfs"
+    },
+    {
+      "slug": "ainew-js-scaffold-but-0-mounted-chat-style-ai-endp",
+      "component": "AinewJsScaffoldBut0MountedChatStyleAiEndpPage",
+      "label": "aiNew.js scaffold but 0 mounted /chat-style AI endpoints",
+      "endpoint": "/api/gap-ainew-js-scaffold-but-0-mounted-chat-style-ai-endp",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-ai-personalized-career-path-generator-behind-th",
+      "component": "NoAiPersonalizedCareerPathGeneratorBehindThPage",
+      "label": "No AI personalized career-path generator behind the dedicated UI pages",
+      "endpoint": "/api/gap-no-ai-personalized-career-path-generator-behind-th",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-ai-resume-cover-letter-generator-pages-exist-bu",
+      "component": "NoAiResumeCoverLetterGeneratorPagesExistBuPage",
+      "label": "No AI resume / cover-letter generator (pages exist but no backend AI)",
+      "endpoint": "/api/gap-no-ai-resume-cover-letter-generator-pages-exist-bu",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-live-ai-mock-interview-only-static-interviewpre",
+      "component": "NoLiveAiMockInterviewOnlyStaticInterviewprePage",
+      "label": "No live AI mock-interview (only static interviewPrep records)",
+      "endpoint": "/api/gap-no-live-ai-mock-interview-only-static-interviewpre",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-ai-salary-negotiation-simulator-backing-the-pag",
+      "component": "NoAiSalaryNegotiationSimulatorBackingThePagPage",
+      "label": "No AI salary-negotiation simulator backing the page",
+      "endpoint": "/api/gap-no-ai-salary-negotiation-simulator-backing-the-pag",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-notification-system-delivery-channel-for-nudges",
+      "component": "NoNotificationSystemDeliveryChannelForNudgesPage",
+      "label": "No notification system / delivery channel for nudges",
+      "endpoint": "/api/gap-no-notification-system-delivery-channel-for-nudges",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-sis-api-client-powerschool-infinite-campus-beyo",
+      "component": "NoSisApiClientPowerschoolInfiniteCampusBeyoPage",
+      "label": "No SIS API client (PowerSchool, Infinite Campus) beyond integrations scaffold",
+      "endpoint": "/api/gap-no-sis-api-client-powerschool-infinite-campus-beyo",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-direct-internship-job-board-feed-integration",
+      "component": "NoDirectInternshipJobBoardFeedIntegrationPage",
+      "label": "No direct internship/job-board feed integration",
+      "endpoint": "/api/gap-no-direct-internship-job-board-feed-integration",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-college-application-linkage-common-app-fafsa",
+      "component": "NoCollegeApplicationLinkageCommonAppFafsaPage",
+      "label": "No college-application linkage (Common App, FAFSA)",
+      "endpoint": "/api/gap-no-college-application-linkage-common-app-fafsa",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-parent-counselor-portal",
+      "component": "NoParentCounselorPortalPage",
+      "label": "No parent/counselor portal",
+      "endpoint": "/api/gap-no-parent-counselor-portal",
+      "kind": "gap"
+    }
+  ]
+}
