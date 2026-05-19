@@ -28,6 +28,7 @@ const menuItems = [
   { path: '/resume-bullets', label: 'Resume Bullets', icon: '✍️' },
   { path: '/ai-history', label: 'AI History', icon: '🗂️' },
   { path: '/webhooks', label: 'Webhooks', icon: '🔔' },
+  { path: '/custom-views', label: 'Career Views', icon: '🎓' },
 ];
 
 export default function Layout({ children, user, onLogout }) {

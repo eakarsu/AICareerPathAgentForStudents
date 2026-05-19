@@ -65,6 +65,10 @@ app.use('/api/bls-labor-rag', require('./routes/blsLaborRag')); // apply pass 6 
 app.use('/api/labor-trend-alerts', require('./routes/laborTrendAlerts')); // apply pass 6 — audit custom suggestion
 
 app.use('/api/district-white-label', require('./routes/districtWhiteLabel')); // apply pass 6 — audit custom suggestion
+
+// Custom Views — 4 student career-path planning features (2 viz + 2 non-viz)
+app.use('/api/custom-views', require('./routes/customViews'));
+
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });

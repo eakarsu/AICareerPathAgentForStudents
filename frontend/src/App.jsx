@@ -27,6 +27,7 @@ import InterviewMock from './pages/InterviewMock';
 import ResumeBullets from './pages/ResumeBullets';
 import AIHistory from './pages/AIHistory';
 import Webhooks from './pages/Webhooks';
+import CustomViewsPage from './pages/CustomViewsPage';
 import Layout from './components/Layout';
 
 function App() {
@@ -80,6 +81,7 @@ function App() {
         <Route path="/resume-bullets" element={<ResumeBullets />} />
         <Route path="/ai-history" element={<AIHistory />} />
         <Route path="/webhooks" element={<Webhooks />} />
+        <Route path="/custom-views" element={<CustomViewsPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Layout>
