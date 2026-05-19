@@ -18,6 +18,17 @@ const menuItems = [
   { path: '/salary-insights', label: 'Salary Insights', icon: '💰' },
   { path: '/assessments', label: 'Career Assessment', icon: '📋' },
   { path: '/career-chat', label: 'AI Career Chat', icon: '🤖' },
+  { path: '/career-match', label: 'Career Match', icon: '🎯' },
+  { path: '/salary-negotiation', label: 'Salary Negotiation', icon: '💼' },
+  { path: '/scholarship-eligibility', label: 'Scholarship Eligibility', icon: '🎓' },
+  { path: '/personalized-roadmap', label: 'Personalized Roadmap', icon: '🗺️' },
+  { path: '/peer-mentor-match', label: 'Peer Mentor Match', icon: '🤝' },
+  { path: '/company-culture-fit', label: 'Company Culture Fit', icon: '🏢' },
+  { path: '/interview-mock', label: 'Mock Interview', icon: '🎤' },
+  { path: '/resume-bullets', label: 'Resume Bullets', icon: '✍️' },
+  { path: '/ai-history', label: 'AI History', icon: '🗂️' },
+  { path: '/webhooks', label: 'Webhooks', icon: '🔔' },
+  { path: '/custom-views', label: 'Career Views', icon: '🎓' },
 ];
 
 export default function Layout({ children, user, onLogout }) {

@@ -17,6 +17,17 @@ import IndustryInsights from './pages/IndustryInsights';
 import SalaryInsights from './pages/SalaryInsights';
 import Assessments from './pages/Assessments';
 import CareerChat from './pages/CareerChat';
+import CareerMatch from './pages/CareerMatch';
+import SalaryNegotiation from './pages/SalaryNegotiation';
+import ScholarshipEligibility from './pages/ScholarshipEligibility';
+import PersonalizedRoadmap from './pages/PersonalizedRoadmap';
+import PeerMentorMatch from './pages/PeerMentorMatch';
+import CompanyCultureFit from './pages/CompanyCultureFit';
+import InterviewMock from './pages/InterviewMock';
+import ResumeBullets from './pages/ResumeBullets';
+import AIHistory from './pages/AIHistory';
+import Webhooks from './pages/Webhooks';
+import CustomViewsPage from './pages/CustomViewsPage';
 import Layout from './components/Layout';
 
 function App() {
@@ -60,6 +71,17 @@ function App() {
         <Route path="/salary-insights" element={<SalaryInsights />} />
         <Route path="/assessments" element={<Assessments />} />
         <Route path="/career-chat" element={<CareerChat />} />
+        <Route path="/career-match" element={<CareerMatch />} />
+        <Route path="/salary-negotiation" element={<SalaryNegotiation />} />
+        <Route path="/scholarship-eligibility" element={<ScholarshipEligibility />} />
+        <Route path="/personalized-roadmap" element={<PersonalizedRoadmap />} />
+        <Route path="/peer-mentor-match" element={<PeerMentorMatch />} />
+        <Route path="/company-culture-fit" element={<CompanyCultureFit />} />
+        <Route path="/interview-mock" element={<InterviewMock />} />
+        <Route path="/resume-bullets" element={<ResumeBullets />} />
+        <Route path="/ai-history" element={<AIHistory />} />
+        <Route path="/webhooks" element={<Webhooks />} />
+        <Route path="/custom-views" element={<CustomViewsPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Layout>

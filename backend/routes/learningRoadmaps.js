@@ -2,13 +2,27 @@ const express = require('express');
 const pool = require('../config/database');
 const { callOpenRouter } = require('../config/openrouter');
 const { authenticateToken } = require('../middleware/auth');
+const { aiRateLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM learning_roadmaps ORDER BY created_at DESC');
-    res.json(result.rows);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM learning_roadmaps');
+    const total = parseInt(countResult.rows[0].count);
+
+    const result = await pool.query(
+      'SELECT * FROM learning_roadmaps ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+    res.json({
+      data: result.rows,
+      pagination: { page, limit, total, total_pages: Math.ceil(total / limit) },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -61,7 +75,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/ai-generate', authenticateToken, async (req, res) => {
+router.post('/ai-generate', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const { career_goal, current_level, timeline } = req.body;
     const aiResponse = await callOpenRouter([
