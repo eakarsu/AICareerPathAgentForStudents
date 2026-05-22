@@ -68,6 +68,7 @@ app.use('/api/district-white-label', require('./routes/districtWhiteLabel')); //
 
 // Custom Views — 4 student career-path planning features (2 viz + 2 non-viz)
 app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/application-deadline-risk', require('./routes/applicationDeadlineRisk'));
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);

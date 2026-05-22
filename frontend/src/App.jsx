@@ -30,6 +30,12 @@ import Webhooks from './pages/Webhooks';
 import CustomViewsPage from './pages/CustomViewsPage';
 import Layout from './components/Layout';
 
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
+import TimelineView from './pages/TimelineView';
+import ApplicationDeadlineRisk from './pages/ApplicationDeadlineRisk';
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
@@ -55,6 +61,10 @@ function App() {
   return (
     <Layout user={user} onLogout={handleLogout}>
       <Routes>
+        <Route path="/insights/timeline" element={<TimelineView />} />
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
         <Route path="/" element={<Dashboard />} />
         <Route path="/career-paths" element={<CareerPaths />} />
         <Route path="/skills" element={<Skills />} />
@@ -82,6 +92,7 @@ function App() {
         <Route path="/ai-history" element={<AIHistory />} />
         <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/custom-views" element={<CustomViewsPage />} />
+        <Route path="/application-deadline-risk" element={<ApplicationDeadlineRisk />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Layout>

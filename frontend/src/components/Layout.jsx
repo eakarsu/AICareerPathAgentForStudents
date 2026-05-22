@@ -29,6 +29,7 @@ const menuItems = [
   { path: '/ai-history', label: 'AI History', icon: '🗂️' },
   { path: '/webhooks', label: 'Webhooks', icon: '🔔' },
   { path: '/custom-views', label: 'Career Views', icon: '🎓' },
+  { path: '/application-deadline-risk', label: 'Deadline Risk', icon: '⏰' },
 ];
 
 export default function Layout({ children, user, onLogout }) {
