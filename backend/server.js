@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config({ path: '../.env' });
+require('./config/runtime').validateRuntime();
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 3001;
@@ -51,6 +52,7 @@ app.use('/api/webhooks', require('./routes/webhooks'));
 // Apply pass 5 — backlog (notifications, job/learning integrations, exports)
 app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/export', require('./routes/exportData'));
+app.use('/api/governed-plans', require('./routes/governedPlans'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -73,16 +75,3 @@ app.use('/api/application-deadline-risk', require('./routes/applicationDeadlineR
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });
-
-
-// === Batch 01 Gaps & Frontend Mounts ===
-app.use('/api/gap-ainew-js-scaffold-but-0-mounted-chat-style-ai-endp', require('./routes/gap_ainew_js_scaffold_but_0_mounted_chat_style_ai_endp'));
-app.use('/api/gap-no-ai-personalized-career-path-generator-behind-th', require('./routes/gap_no_ai_personalized_career_path_generator_behind_th'));
-app.use('/api/gap-no-ai-resume-cover-letter-generator-pages-exist-bu', require('./routes/gap_no_ai_resume_cover_letter_generator_pages_exist_bu'));
-app.use('/api/gap-no-live-ai-mock-interview-only-static-interviewpre', require('./routes/gap_no_live_ai_mock_interview_only_static_interviewpre'));
-app.use('/api/gap-no-ai-salary-negotiation-simulator-backing-the-pag', require('./routes/gap_no_ai_salary_negotiation_simulator_backing_the_pag'));
-app.use('/api/gap-no-notification-system-delivery-channel-for-nudges', require('./routes/gap_no_notification_system_delivery_channel_for_nudges'));
-app.use('/api/gap-no-sis-api-client-powerschool-infinite-campus-beyo', require('./routes/gap_no_sis_api_client_powerschool_infinite_campus_beyo'));
-app.use('/api/gap-no-direct-internship-job-board-feed-integration', require('./routes/gap_no_direct_internship_job_board_feed_integration'));
-app.use('/api/gap-no-college-application-linkage-common-app-fafsa', require('./routes/gap_no_college_application_linkage_common_app_fafsa'));
-app.use('/api/gap-no-parent-counselor-portal', require('./routes/gap_no_parent_counselor_portal'));

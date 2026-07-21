@@ -8,6 +8,9 @@ const router = express.Router();
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !/^\S+@\S+\.\S+$/.test(email) || typeof password !== 'string' || password.length < 12) {
+      return res.status(400).json({ error: 'Valid name/email and a password of at least 12 characters are required' });
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
       'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email, created_at',
@@ -19,7 +22,7 @@ router.post('/register', async (req, res) => {
     if (err.code === '23505') {
       return res.status(400).json({ error: 'Email already exists' });
     }
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -38,7 +41,7 @@ router.post('/login', async (req, res) => {
     const token = generateToken(user);
     res.json({ user: { id: user.id, name: user.name, email: user.email }, token });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
