@@ -25,8 +25,8 @@ export default function Login({ onLogin }) {
   };
 
   const fillDemo = () => {
-    setEmail('demo@student.com');
-    setPassword('demo123');
+    setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
+    setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
     setIsRegister(false);
   };
 
