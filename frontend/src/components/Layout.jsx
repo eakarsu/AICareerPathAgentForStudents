@@ -13,6 +13,7 @@ const menuItems = [
   { path: '/networking-events', label: 'Networking Events', icon: '🌐' },
   { path: '/resumes', label: 'Resume Builder', icon: '📄' },
   { path: '/portfolios', label: 'Portfolio Builder', icon: '💼' },
+  { path: '/work-simulations', label: 'Work Simulations', icon: '🧭' },
   { path: '/learning-roadmaps', label: 'Learning Roadmaps', icon: '🗺️' },
   { path: '/industry-insights', label: 'Industry Insights', icon: '🏭' },
   { path: '/salary-insights', label: 'Salary Insights', icon: '💰' },

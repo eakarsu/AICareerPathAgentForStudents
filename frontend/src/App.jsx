@@ -35,6 +35,7 @@ import CodexOperationsFeature from './pages/CodexOperationsFeature';
 
 import TimelineView from './pages/TimelineView';
 import ApplicationDeadlineRisk from './pages/ApplicationDeadlineRisk';
+import WorkSimulationPortfolio from './pages/WorkSimulationPortfolio';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -93,6 +94,7 @@ function App() {
         <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/custom-views" element={<CustomViewsPage />} />
         <Route path="/application-deadline-risk" element={<ApplicationDeadlineRisk />} />
+        <Route path="/work-simulations" element={<WorkSimulationPortfolio />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Layout>

@@ -1,0 +1,16 @@
+import React, { useEffect, useMemo, useState } from 'react';
+const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:4000/api';
+const dimensions = [['communication_score','Communication'],['collaboration_score','Collaboration'],['creativity_score','Creativity'],['critical_thinking_score','Critical thinking'],['leadership_score','Leadership']];
+export default function WorkSimulationPortfolio(){
+  const [rows,setRows]=useState([]),[error,setError]=useState(''),[busy,setBusy]=useState(true);
+  const token=localStorage.getItem('token');
+  const request=async(path,options={})=>{const r=await fetch(`${API}/work-simulations${path}`,{...options,headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}});const b=await r.json();if(!r.ok)throw new Error(b.error||'Request failed');return b;};
+  const load=()=>{setBusy(true);request('').then(b=>setRows(b.data||[])).catch(e=>setError(e.message)).finally(()=>setBusy(false));};
+  useEffect(load,[]);
+  const summary=useMemo(()=>({verified:rows.filter(r=>r.status==='verified').length,avg:rows.length?Math.round(rows.reduce((sum,r)=>sum+dimensions.reduce((s,[k])=>s+Number(r[k]),0)/5,0)/rows.length):0}),[rows]);
+  const advance=async(id)=>{await request(`/${id}/advance`,{method:'POST'});load();};
+  const box={background:'#fff',border:'1px solid #dbeafe',borderRadius:16,padding:18,boxShadow:'0 10px 30px rgba(30,64,175,.08)'};
+  return <div style={{padding:28}}><div style={{marginBottom:20}}><div style={{color:'#4f46e5',fontWeight:800}}>EVIDENCE-BACKED TALENT SIGNALS</div><h1>Skills Portfolio & Work Simulations</h1><p>Replace résumé inference with observed contributions, scored durable skills, and verified artifacts.</p></div>
+  {error&&<div style={{...box,color:'#b91c1c'}}>{error}</div>}<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:16}}><div style={box}><small>Simulations</small><h2>{rows.length}</h2></div><div style={box}><small>Verified portfolios</small><h2>{summary.verified}</h2></div><div style={box}><small>Average durable-skill score</small><h2>{summary.avg}%</h2></div></div>
+  <div style={{display:'grid',gap:14}}>{busy?'Loading PostgreSQL simulations…':rows.map(row=><article key={row.id} style={box}><div style={{display:'flex',justifyContent:'space-between',gap:12}}><div><h3 style={{margin:0}}>{row.candidate_name}</h3><b>{row.simulation_type}</b><p>{row.employer_scenario}</p></div><div><span style={{padding:'6px 10px',borderRadius:99,background:'#eef2ff'}}>{row.status.replace('_',' ')}</span></div></div><div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>{dimensions.map(([key,label])=><div key={key} style={{background:'#f8fafc',padding:10,borderRadius:10}}><small>{label}</small><strong style={{display:'block',fontSize:20}}>{row[key]}%</strong></div>)}</div><div style={{display:'flex',justifyContent:'space-between',marginTop:14,alignItems:'center'}}><small>{(row.evidence||[]).length} evidence artifacts · {row.reviewer_notes}</small><button disabled={row.status==='verified'} onClick={()=>advance(row.id)} style={{border:0,borderRadius:8,padding:'9px 12px',background:'#4f46e5',color:'#fff'}}>Advance review</button></div></article>)}</div></div>;
+}
