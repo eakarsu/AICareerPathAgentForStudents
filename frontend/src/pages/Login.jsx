@@ -115,7 +115,7 @@ export default function Login({ onLogin }) {
               </button>
             </form>
             <button className="btn btn-demo" onClick={fillDemo}>
-              🔑 Fill Demo Credentials
+              Auto Fill Demo Credentials
             </button>
             <div className="login-switch">
               {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}

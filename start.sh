@@ -61,7 +61,7 @@ set -a
 . "$ROOT/.env"
 set +a
 (cd "$ROOT/backend" && npm start) & BACKEND_PID=$!
-(cd "$ROOT/frontend" && npm run dev -- --host 127.0.0.1 --port "${FRONTEND_PORT:-3000}") & FRONTEND_PID=$!
+(cd "$ROOT/frontend" && VITE_BACKEND_URL="http://127.0.0.1:${BACKEND_PORT:-3001}" npm run dev -- --host 127.0.0.1 --port "${FRONTEND_PORT:-3000}") & FRONTEND_PID=$!
 cleanup(){ kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true; wait "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 wait "$BACKEND_PID" "$FRONTEND_PID"
