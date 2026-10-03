@@ -37,7 +37,9 @@ export default function FeaturePage({
   const fetchItems = async () => {
     try {
       const { data } = await axios.get(`/api/${apiEndpoint}`, { headers });
-      setItems(data);
+      const items = Array.isArray(data) ? data : data?.data;
+      if (!Array.isArray(items)) throw new Error('Invalid list response');
+      setItems(items);
     } catch (err) {
       console.error('Error fetching items:', err);
     }
