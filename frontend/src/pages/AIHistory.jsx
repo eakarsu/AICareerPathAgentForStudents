@@ -1,87 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { aiApi } from '../services/api';
-
-export default function AIHistory() {
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState([]);
-  const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
-  const [endpoint, setEndpoint] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(null);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await aiApi.results(page, 20, endpoint || undefined);
-      setData(res.data.data || []);
-      setPagination(res.data.pagination || { total: 0, total_pages: 0 });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); /* eslint-disable-line */ }, [page, endpoint]);
-
-  const ENDPOINTS = [
-    '', 'career-match', 'salary-negotiation', 'scholarship-eligibility',
-    'personalized-roadmap', 'peer-mentor-match', 'company-culture-fit'
-  ];
-
-  return (
-    <div className="feature-page">
-      <div className="page-header">
-        <div className="page-title">
-          <span className="page-icon">🗂️</span>
-          <div>
-            <h1>AI Run History</h1>
-            <p>All your AI requests and results, paginated.</p>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 12 }}>
-        <label>Filter by endpoint: </label>
-        <select value={endpoint} onChange={(e) => { setPage(1); setEndpoint(e.target.value); }}>
-          {ENDPOINTS.map(e => <option key={e} value={e}>{e || 'All'}</option>)}
-        </select>
-      </div>
-
-      {loading ? <p>Loading...</p> : (
-        <div>
-          {data.length === 0 && <p>No AI runs yet.</p>}
-          {data.map((row) => (
-            <div key={row.id} style={{ padding: 12, background: '#1f2937', borderRadius: 12, margin: '8px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <strong>{row.endpoint}</strong>
-                <span style={{ color: '#94a3b8' }}>{new Date(row.created_at).toLocaleString()}</span>
-              </div>
-              <button className="btn" onClick={() => setExpanded(expanded === row.id ? null : row.id)} style={{ marginTop: 8 }}>
-                {expanded === row.id ? 'Hide' : 'Show'} Details
-              </button>
-              {expanded === row.id && (
-                <div style={{ marginTop: 12 }}>
-                  <h4>Request</h4>
-                  <pre style={{ background: '#0f172a', padding: 8, borderRadius: 8, color: '#e2e8f0', overflow: 'auto' }}>
-                    {JSON.stringify(row.request_data, null, 2)}
-                  </pre>
-                  <h4>Result</h4>
-                  <pre style={{ background: '#0f172a', padding: 8, borderRadius: 8, color: '#e2e8f0', overflow: 'auto', maxHeight: 400 }}>
-                    {JSON.stringify(row.result_data, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          ))}
-
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
-            <button className="btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
-            <span>Page {page} of {pagination.total_pages || 1} ({pagination.total} total)</span>
-            <button className="btn" disabled={page >= (pagination.total_pages || 1)} onClick={() => setPage(p => p + 1)}>Next →</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+import React,{useEffect,useState} from 'react';
+import api from '../services/api';
+import AIReport from '../components/AIReport';
+export default function AIHistory(){
+ const [rows,setRows]=useState([]),[page,setPage]=useState(1),[pagination,setPagination]=useState({total:0,total_pages:0}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[selected,setSelected]=useState(null),[editing,setEditing]=useState(false),[draft,setDraft]=useState({title:'',notes:''});
+ const load=async()=>{setBusy(true);setError('');try{const {data}=await api.get('/native-reports',{params:{page,limit:20}});if(!Array.isArray(data?.data)||!data.pagination)throw new Error('The server returned an invalid saved-report list.');setRows(data.data);setPagination(data.pagination);}catch(err){setError(err.response?.data?.error||err.message);}finally{setBusy(false);}};
+ useEffect(()=>{load();},[page]);
+ const open=async row=>{try{const {data}=await api.get(`/native-reports/${row.id}`);setSelected(data);setDraft({title:data.title,notes:data.notes||''});setEditing(false);setError('');}catch(err){setError(err.response?.data?.error||err.message);}};
+ const save=async event=>{event.preventDefault();setBusy(true);try{const {data}=await api.patch(`/native-reports/${selected.id}`,draft);setSelected(data);setEditing(false);await load();}catch(err){setError(err.response?.data?.error||err.message);}finally{setBusy(false);}};
+ const remove=async()=>{if(!window.confirm('Delete this saved report?'))return;setBusy(true);try{await api.delete(`/native-reports/${selected.id}`);setSelected(null);await load();}catch(err){setError(err.response?.data?.error||err.message);}finally{setBusy(false);}};
+ return <section className="feature-page"><h1>AI Run History</h1><p>Completed OpenRouter responses from your native AI tools. Original provider output and submitted inputs stay unchanged when you edit review notes.</p>{error&&<div role="alert" className="error-message">{error}<button className="btn" onClick={load}>Retry</button></div>}{busy&&!selected?<p role="status">Loading saved reports…</p>:!error&&!rows.length?<p>No completed AI runs yet. Examples do not generate reports until you choose Generate.</p>:rows.map(row=><button className="ai-history-row" key={row.id} onClick={()=>open(row)}><span><strong>{row.title}</strong><br/><small>{row.endpoint} · {new Date(row.created_at).toLocaleString()} · {row.receipt.model}</small></span><span>Open report →</span></button>)}<div className="career-action-row"><button className="btn" disabled={page===1||busy} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page} of {pagination.total_pages||1} · {pagination.total} saved</span><button className="btn" disabled={page>=(pagination.total_pages||1)||busy} onClick={()=>setPage(page+1)}>Next</button></div>
+ {selected&&<div className="modal-overlay" onClick={()=>{if(!busy)setSelected(null);}}><div className="modal-content ai-workspace-dialog" role="dialog" aria-modal="true" aria-label="Saved AI report" onClick={event=>event.stopPropagation()}><header className="modal-header"><h2>{selected.title}</h2><button className="modal-close" disabled={busy} onClick={()=>setSelected(null)}>×</button></header><div className="modal-body">{editing?<form id="report-review" onSubmit={save}><div className="form-group"><label htmlFor="report-title">Title</label><input id="report-title" required maxLength={200} value={draft.title} onChange={event=>setDraft({...draft,title:event.target.value})}/></div><div className="form-group"><label htmlFor="report-notes">Review notes (optional)</label><textarea id="report-notes" maxLength={10000} value={draft.notes} onChange={event=>setDraft({...draft,notes:event.target.value})}/></div><p>Provider output, receipt and original inputs cannot be edited.</p></form>:<><AIReport response={selected.result_data} title={selected.title} model={selected.receipt.model} tokens={selected.receipt.usage}/>{selected.notes&&<section><h3>Review notes</h3><p>{selected.notes}</p></section>}<details><summary>Original submitted inputs</summary><AIReport response={selected.request_data} title="Original inputs" sourceLabel="Recorded request inputs"/></details></>}{error&&<p role="alert">{error}</p>}</div><footer className="modal-actions"><button className="btn btn-secondary" disabled={busy} onClick={()=>{if(editing)setEditing(false);else setSelected(null);}}>Cancel</button>{editing?<button className="btn btn-primary" form="report-review" type="submit" disabled={busy}>Save notes</button>:<button className="btn btn-primary" disabled={busy} onClick={()=>setEditing(true)}>Edit</button>}<button className="btn btn-danger" disabled={busy} onClick={remove}>Delete</button></footer></div></div>}
+ </section>;
 }

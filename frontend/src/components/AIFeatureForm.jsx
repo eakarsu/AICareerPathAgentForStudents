@@ -1,155 +1,38 @@
-import React, { useState } from 'react';
+import React, {useEffect, useId, useRef, useState} from 'react';
 import AIResponseDisplay from './AIResponseDisplay';
 import FeedbackWidget from './FeedbackWidget';
+import {careerExample,careerScenarios,requestValues} from './CareerExamples';
 
-/**
- * Reusable form for AI features with structured/unstructured response display.
- *
- * Props:
- * - title, icon, description
- * - fields: [{ key, label, type, placeholder, options, required, multi }]
- *   type: text | textarea | select | number | tags (comma list) | array
- * - onSubmit: async (formData) => responseObject
- * - endpoint: string label for feedback widget
- * - renderResult: optional custom (result) => JSX
- */
-export default function AIFeatureForm({
-  title,
-  icon,
-  description,
-  fields,
-  onSubmit,
-  endpoint,
-  renderResult,
-}) {
-  const [formData, setFormData] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-
-  const handleChange = (key, value) => setFormData({ ...formData, [key]: value });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setResult(null);
-    try {
-      // Process fields: convert tags type comma string -> array
-      const payload = { ...formData };
-      fields.forEach((f) => {
-        if (f.type === 'tags' && typeof payload[f.key] === 'string') {
-          payload[f.key] = payload[f.key].split(',').map((s) => s.trim()).filter(Boolean);
-        }
-        if (f.type === 'array_json' && typeof payload[f.key] === 'string') {
-          try { payload[f.key] = JSON.parse(payload[f.key]); } catch { /* leave as string */ }
-        }
-      });
-      const data = await onSubmit(payload);
-      setResult(data);
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'AI request failed');
-    } finally {
-      setLoading(false);
-    }
+export default function AIFeatureForm({title,icon,description,fields,onSubmit,endpoint,compact=false}) {
+  const missingSource=fields.find(field=>field.required&&field.sourceReference&&!(field.options||[]).length);
+  const [formData,setFormData]=useState({}),[loading,setLoading]=useState(false),[result,setResult]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[submitted,setSubmitted]=useState(null);
+  const active=useRef(null),sequence=useRef(0),id=useId();
+  const change=(key,value)=>{setFormData(current=>({...current,[key]:value}));setResult(null);setSubmitted(null);};
+  const cancel=()=>{sequence.current++;active.current?.abort();active.current=null;setLoading(false);setNotice('Request cancelled. Reports completed before cancellation remain in AI History.');};
+  useEffect(()=>{setFormData({});setResult(null);setError('');setNotice('');return()=>{sequence.current++;active.current?.abort();};},[endpoint]);
+  const fill=index=>{try{setFormData(careerExample(fields,index,formData));setError('');setNotice('Every editable field is filled, including optional fields. Existing structured source data and saved-record selections are preserved. Review this fictional practice example before generating.');}catch(err){setError(err.message);}};
+  const submit=async event=>{
+    event?.preventDefault();if(loading)return;if(missingSource){setError(`Load or create an actual owned ${missingSource.label.toLowerCase()} before generating.`);return;}
+    const generation=++sequence.current,controller=new AbortController();active.current=controller;setLoading(true);setError('');setNotice('');setResult(null);
+    try{const payload=requestValues(fields,formData);const data=await onSubmit(payload,{signal:controller.signal});if(!controller.signal.aborted&&generation===sequence.current){setSubmitted(payload);setResult(data);}}
+    catch(err){if(!controller.signal.aborted&&generation===sequence.current)setError(err.response?.data?.error||err.response?.data?.errors?.map(e=>e.msg).join('; ')||err.message||'AI request failed');}
+    finally{if(generation===sequence.current){active.current=null;setLoading(false);}}
   };
-
-  return (
-    <div className="feature-page">
-      <div className="page-header">
-        <div className="page-title">
-          <span className="page-icon">{icon}</span>
-          <div>
-            <h1>{title}</h1>
-            <p>{description}</p>
-          </div>
-        </div>
+  return <section className={compact?'career-ai-workspace':'feature-page'} aria-label={title}>
+    {!compact&&<div className="page-header"><div className="page-title"><span className="page-icon">{icon}</span><div><h1>{title}</h1><p>{description}</p></div></div></div>}
+    <div className="ai-panel"><div className="ai-panel-body"><form onSubmit={submit}>
+      <div className="career-example-toolbar" aria-label="Fill all AI fields"><p>Demo AI fills the whole form, including optional fields. Examples are fictional. Supplied structured source data and saved-record selections are preserved; no experience, eligibility, or market facts are verified.</p>
+        <div className="career-action-row">{careerScenarios.map((scenario,index)=><button type="button" className="btn btn-secondary" disabled={loading} key={scenario} onClick={()=>fill(index)}>Demo AI · {scenario}</button>)}</div>
       </div>
-
-      <div className="ai-panel" style={{ marginTop: 16 }}>
-        <div className="ai-panel-body">
-          <form onSubmit={handleSubmit}>
-            {fields.map((f) => (
-              <div className="form-group" key={f.key}>
-                <label>{f.label}{f.required && ' *'}</label>
-                {f.type === 'textarea' ? (
-                  <textarea
-                    rows={f.rows || 3}
-                    value={formData[f.key] || ''}
-                    onChange={(e) => handleChange(f.key, e.target.value)}
-                    placeholder={f.placeholder}
-                    required={f.required}
-                  />
-                ) : f.type === 'select' ? (
-                  <select
-                    value={formData[f.key] || ''}
-                    onChange={(e) => handleChange(f.key, e.target.value)}
-                    required={f.required}
-                  >
-                    <option value="">Select...</option>
-                    {f.options.map((o) => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
-                ) : f.type === 'tags' ? (
-                  <input
-                    type="text"
-                    value={formData[f.key] || ''}
-                    onChange={(e) => handleChange(f.key, e.target.value)}
-                    placeholder={f.placeholder || 'comma-separated values'}
-                    required={f.required}
-                  />
-                ) : f.type === 'array_json' ? (
-                  <textarea
-                    rows={f.rows || 4}
-                    value={formData[f.key] || ''}
-                    onChange={(e) => handleChange(f.key, e.target.value)}
-                    placeholder={f.placeholder || '[{ ... }]'}
-                    required={f.required}
-                  />
-                ) : (
-                  <input
-                    type={f.type || 'text'}
-                    value={formData[f.key] || ''}
-                    onChange={(e) => handleChange(f.key, e.target.value)}
-                    placeholder={f.placeholder}
-                    required={f.required}
-                  />
-                )}
-                {f.help && <small style={{ color: '#94a3b8' }}>{f.help}</small>}
-              </div>
-            ))}
-
-            <button className="btn btn-ai" type="submit" disabled={loading}>
-              {loading ? (
-                <span className="loading-dots">Generating<span>.</span><span>.</span><span>.</span></span>
-              ) : (
-                `🤖 Run AI ${title}`
-              )}
-            </button>
-          </form>
-        </div>
-
-        {error && (
-          <div style={{ background: '#fee2e2', color: '#991b1b', padding: 16, borderRadius: 12, margin: '20px 0' }}>
-            {error}
-          </div>
-        )}
-
-        {result && (
-          <div style={{ marginTop: 24 }}>
-            {renderResult ? renderResult(result) : (
-              <AIResponseDisplay
-                content={typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
-                title={`AI ${title}`}
-              />
-            )}
-            {endpoint && (
-              <FeedbackWidget endpoint={endpoint} requestData={formData} />
-            )}
-          </div>
-        )}
-      </div>
+      {fields.map(field=>{const controlId=`${id}-${field.key}`,common={id:controlId,name:field.key,required:field.required,disabled:loading,value:formData[field.key]??'',onChange:event=>change(field.key,event.target.value),placeholder:field.placeholder};return <div className="form-group" key={field.key}><label htmlFor={controlId}>{field.label}{field.required?' *':' (optional)'}</label>
+        {['textarea','array_json'].includes(field.type)?<textarea {...common} rows={field.rows||3}/>:field.type==='select'?<select {...common}><option value="">Select…</option>{field.options?.map(option=><option key={typeof option==='object'?option.value:option} value={typeof option==='object'?option.value:option}>{typeof option==='object'?option.label:option}</option>)}</select>:field.type==='checkbox'?<input id={controlId} name={field.key} type="checkbox" disabled={loading} checked={Boolean(formData[field.key])} onChange={event=>change(field.key,event.target.checked)}/>:<input {...common} type={field.type==='number'?'number':'text'} min={field.min} max={field.max} step={field.step}/>}
+        {field.help&&<small>{field.help}</small>}</div>;})}
+      {missingSource&&<p role="alert">Load or create an actual owned {missingSource.label.toLowerCase()} before generating. No record ID will be invented.</p>}
+      <div className="career-action-row"><button className="btn btn-ai" type="submit" disabled={loading||Boolean(missingSource)}>{loading?'Generating…':'Generate with OpenRouter'}</button><button className="btn btn-secondary" type="button" onClick={cancel} disabled={!loading}>Cancel</button></div>
+    </form></div>
+    {notice&&<p role="status" className="career-notice">{notice}</p>}
+    {error&&<div role="alert" className="error-message">{error}<button type="button" className="btn btn-secondary" disabled={loading} onClick={submit}>Retry</button></div>}
+    {result!==null&&<><AIResponseDisplay content={result} title={`AI ${title}`}/>{endpoint&&<FeedbackWidget endpoint={endpoint} requestData={submitted||{}}/>}</>}
     </div>
-  );
+  </section>;
 }

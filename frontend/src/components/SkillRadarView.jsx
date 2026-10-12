@@ -1,21 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import useCareerTaxonomy from './useCareerTaxonomy';
 
 // VIZ #1: Skill-gap radar/bar chart vs target role.
 // Pure inline SVG -> no extra deps.
-const ROLE_OPTIONS = [
-  { id: 'sde', label: 'Software Engineer' },
-  { id: 'ds',  label: 'Data Scientist' },
-  { id: 'des', label: 'UX / Product Designer' },
-  { id: 'pm',  label: 'Product Manager' },
-  { id: 'bio', label: 'Biomedical Researcher' },
-  { id: 'civ', label: 'Civil Engineer' },
-  { id: 'edu', label: 'Teacher / Educator' },
-  { id: 'fin', label: 'Financial Analyst' },
-];
+
 
 export default function SkillRadarView() {
-  const [role, setRole] = useState('sde');
+  const [role, setRole] = useState('');
+  const taxonomy=useCareerTaxonomy();
+  useEffect(()=>{if(!taxonomy.roles.some(item=>item.id===role)) setRole(taxonomy.roles[0]?.id||'');},[taxonomy.roles,role]);
   const [currentSkills, setCurrentSkills] = useState({});
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -46,14 +40,15 @@ export default function SkillRadarView() {
   return (
     <div style={card} data-testid="skill-gap-radar">
       <h3 style={h3}>Skill Gap — Radar + Bar</h3>
-      <p style={muted}>VIZ — radar shows current vs target, bars rank the biggest gaps.</p>
+      <p style={muted}>Local self-rating chart against your saved illustrative role taxonomy; not an AI or verified readiness assessment.</p>
+      {taxonomy.error&&<div style={errBox} role="alert">{taxonomy.error} <button onClick={taxonomy.retry} style={btn}>Retry roles</button></div>}
       <div style={row}>
         <label style={lbl}>Target role
           <select value={role} onChange={e => { setRole(e.target.value); setData(null); setCurrentSkills({}); }} style={inp}>
-            {ROLE_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            {taxonomy.roles.map(o => <option key={o.id} value={o.id}>{o.title}</option>)}
           </select>
         </label>
-        <button onClick={run} disabled={loading} style={btn}>{loading ? 'Calculating…' : 'Compute Skill Gap'}</button>
+        <button onClick={run} disabled={loading||taxonomy.loading||!role} style={btn}>{loading ? 'Calculating…' : 'Compute Skill Gap'}</button>
       </div>
 
       {data && (
@@ -108,7 +103,7 @@ export default function SkillRadarView() {
             </div>
           </div>
           <div style={{ marginTop: 8, color: '#cbd5e1', fontSize: 13 }}>
-            Overall readiness: <strong>{Math.round((data.overallReadiness || 0) * 100)}%</strong> — {data.recommendation}
+            Local self-rating: <strong>{Math.round((data.overallReadiness || 0) * 100)}%</strong> — {data.recommendation}
           </div>
         </>
       )}

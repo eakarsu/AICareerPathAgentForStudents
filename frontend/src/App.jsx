@@ -29,6 +29,7 @@ import AIHistory from './pages/AIHistory';
 import Webhooks from './pages/Webhooks';
 import CustomViewsPage from './pages/CustomViewsPage';
 import Layout from './components/Layout';
+import CareerPlanningTools from './pages/CareerPlanningTools';
 
 import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
 import CodexOperationsFeature from './pages/CodexOperationsFeature';
@@ -90,6 +91,7 @@ function App() {
         <Route path="/company-culture-fit" element={<CompanyCultureFit />} />
         <Route path="/interview-mock" element={<InterviewMock />} />
         <Route path="/resume-bullets" element={<ResumeBullets />} />
+        <Route path="/career-planning-tools" element={<CareerPlanningTools />} />
         <Route path="/ai-history" element={<AIHistory />} />
         <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/custom-views" element={<CustomViewsPage />} />

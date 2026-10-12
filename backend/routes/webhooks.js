@@ -32,13 +32,15 @@ router.use(authenticateToken);
 router.get('/', async (req, res) => {
   try {
     const r = await pool.query(
-      'SELECT id, url, events, active, created_at, updated_at FROM webhooks WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT id, url, events, active, is_demo, created_at, updated_at FROM webhooks WHERE user_id = $1 ORDER BY created_at DESC',
       [req.user?.id || null]
     );
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: 'Failed to list webhooks', details: err.message }); }
 });
 
+router.get('/:id',async(req,res)=>{try{const row=(await pool.query('SELECT id,url,events,active,is_demo,(secret IS NOT NULL)AS has_secret,created_at,updated_at FROM webhooks WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Subscription not found'});res.json(row);}catch(error){res.status(503).json({error:'Subscription could not be loaded. Retry.'});}});
+router.put('/:id',async(req,res)=>{try{if(Object.keys(req.body||{}).some(key=>!['url','events'].includes(key)))return res.status(400).json({error:'Only the URL and event choices can be edited. Stored signing credentials and ownership are retained.'});let url;try{url=new URL(req.body.url);}catch(_){return res.status(422).json({error:'Provide a valid HTTPS endpoint URL.'});}if(url.protocol!=='https:'||url.username||url.password||!Array.isArray(req.body.events)||!req.body.events.length||req.body.events.some(event=>!ALLOWED_EVENTS.includes(event)))return res.status(422).json({error:'Provide a valid HTTPS endpoint and supported event choices.'});const row=(await pool.query('UPDATE webhooks SET url=$1,events=$2,updated_at=NOW() WHERE id=$3 AND user_id=$4 RETURNING id,url,events,active,is_demo,created_at,updated_at',[url.href,req.body.events,req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Subscription not found'});res.json(row);}catch(error){res.status(503).json({error:'Subscription could not be updated. Retry.'});}});
 router.post('/', async (req, res) => {
   try {
     const { url, events, secret } = req.body || {};

@@ -1,23 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import useCareerTaxonomy from './useCareerTaxonomy';
 
 // NON-VIZ #1: Career plan PDF (printable structured plan).
 // Posts to /custom-views/career-plan-pdf and renders a print-friendly view.
-const ROLE_OPTIONS = [
-  { id: 'sde', label: 'Software Engineer' },
-  { id: 'ds',  label: 'Data Scientist' },
-  { id: 'des', label: 'UX / Product Designer' },
-  { id: 'pm',  label: 'Product Manager' },
-  { id: 'bio', label: 'Biomedical Researcher' },
-  { id: 'civ', label: 'Civil Engineer' },
-  { id: 'edu', label: 'Teacher / Educator' },
-  { id: 'fin', label: 'Financial Analyst' },
-];
+
 
 export default function CareerPlanPdfView() {
   const [studentName, setStudentName] = useState('Demo Student');
   const [gradeLevel, setGradeLevel] = useState('11');
-  const [targetRole, setTargetRole] = useState('sde');
+  const [targetRole, setTargetRole] = useState('');
+  const taxonomy=useCareerTaxonomy();
+  useEffect(()=>{if(!taxonomy.roles.some(item=>item.id===targetRole)) setTargetRole(taxonomy.roles[0]?.id||'');},[taxonomy.roles,targetRole]);
   const [interests, setInterests] = useState('coding, math, building things');
   const [skills, setSkills] = useState('Python, Git, Communication');
   const [data, setData] = useState(null);
@@ -47,18 +41,19 @@ export default function CareerPlanPdfView() {
   return (
     <div style={card} data-testid="career-plan-pdf">
       <h3 style={h3}>Career Plan (Printable PDF)</h3>
-      <p style={muted}>NON-VIZ — generate a structured career plan and Print to PDF.</p>
+      <p style={muted}>Local print template using your saved role taxonomy. Review the draft; it is not an AI result or verified education plan.</p>
+      {taxonomy.error&&<div style={errBox} role="alert">{taxonomy.error} <button onClick={taxonomy.retry} style={btn}>Retry roles</button></div>}
       <div style={row}>
         <label style={lbl}>Student name<input style={inp} value={studentName} onChange={e => setStudentName(e.target.value)} /></label>
         <label style={lbl}>Grade<input style={inp} value={gradeLevel} onChange={e => setGradeLevel(e.target.value)} /></label>
         <label style={lbl}>Target role
           <select style={inp} value={targetRole} onChange={e => setTargetRole(e.target.value)}>
-            {ROLE_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            {taxonomy.roles.map(o => <option key={o.id} value={o.id}>{o.title}</option>)}
           </select>
         </label>
         <label style={lbl}>Interests<input style={inp} value={interests} onChange={e => setInterests(e.target.value)} /></label>
         <label style={lbl}>Skills<input style={inp} value={skills} onChange={e => setSkills(e.target.value)} /></label>
-        <button onClick={run} disabled={loading} style={btn}>{loading ? 'Generating…' : 'Generate Plan'}</button>
+        <button onClick={run} disabled={loading||taxonomy.loading||!targetRole} style={btn}>{loading ? 'Preparing…' : 'Prepare Local Plan'}</button>
         {data && <button onClick={doPrint} style={{ ...btn, background: '#10b981' }}>Print / Save PDF</button>}
       </div>
 

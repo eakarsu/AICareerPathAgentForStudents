@@ -1,3 +1,4 @@
+import AIReportLibrary from "./AIReportLibrary";
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -27,6 +28,8 @@ const menuItems = [
   { path: '/company-culture-fit', label: 'Company Culture Fit', icon: '🏢' },
   { path: '/interview-mock', label: 'Mock Interview', icon: '🎤' },
   { path: '/resume-bullets', label: 'Resume Bullets', icon: '✍️' },
+  { path: '/career-planning-tools', label: 'AI Planning Tools', icon: '🧭' },
+  { path: '/codex/operations', label: 'Career Follow-ups', icon: '📋' },
   { path: '/ai-history', label: 'AI History', icon: '🗂️' },
   { path: '/webhooks', label: 'Webhooks', icon: '🔔' },
   { path: '/custom-views', label: 'Career Views', icon: '🎓' },
@@ -54,6 +57,8 @@ export default function Layout({ children, user, onLogout }) {
             <Link
               key={item.path}
               to={item.path}
+              aria-label={item.label}
+              title={item.label}
               className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
             >
               <span className="nav-icon">{item.icon}</span>
@@ -71,11 +76,11 @@ export default function Layout({ children, user, onLogout }) {
               </div>
             </div>
           )}
-          <button className="logout-btn" onClick={onLogout}>
+          <button className="logout-btn" aria-label="Log out" title="Log out" onClick={onLogout}>
             {sidebarOpen ? 'Logout' : '🚪'}
           </button>
         </div>
-      </aside>
+      <AIReportLibrary /></aside>
       <main className="main-content">
         {children}
       </main>

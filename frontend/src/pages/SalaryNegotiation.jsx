@@ -18,7 +18,7 @@ export default function SalaryNegotiation() {
           rows: 4,
           placeholder: '{ "p25": 85000, "p50": 105000, "p75": 125000, "source": "levels.fyi" }' },
       ]}
-      onSubmit={async (data) => (await aiApi.salaryNegotiation(data)).data}
+      onSubmit={async (data, config) => (await aiApi.salaryNegotiation(data, config)).data}
       renderResult={(r) => (
         <div className="ai-response-container">
           <div className="ai-response-header">

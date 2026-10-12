@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import {validateNativeSession} from '../services/nativeSession';
 
 export default function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
@@ -17,6 +18,7 @@ export default function Login({ onLogin }) {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
       const payload = isRegister ? { name, email, password } : { email, password };
       const { data } = await axios.post(endpoint, payload);
+      validateNativeSession(data);
       onLogin(data.user, data.token);
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong');
@@ -24,10 +26,26 @@ export default function Login({ onLogin }) {
     setLoading(false);
   };
 
+  const demoEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_CREDENTIAL_AUTOFILL === 'true' && Boolean(import.meta.env.VITE_DEMO_EMAIL && import.meta.env.VITE_DEMO_PASSWORD);
+
   const fillDemo = () => {
+    if (!demoEnabled || loading) return;
+    setError('');
     setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
     setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
     setIsRegister(false);
+  };
+
+  const loginDemo = async () => {
+    if (!demoEnabled || loading) return;
+    const credentials = {email: import.meta.env.VITE_DEMO_EMAIL, password: import.meta.env.VITE_DEMO_PASSWORD};
+    fillDemo(); setLoading(true);
+    try {
+      const {data} = await axios.post('/api/auth/login', credentials);
+      validateNativeSession(data,credentials.email);
+      onLogin(data.user, data.token);
+    } catch (err) { setError(err.response?.data?.error || err.message || 'Demo login failed.'); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -76,7 +94,7 @@ export default function Login({ onLogin }) {
             <p className="login-subtitle">
               {isRegister ? 'Start your career journey today' : 'Sign in to continue your journey'}
             </p>
-            {error && <div className="error-message">{error}</div>}
+            {error && <div className="error-message" role="alert">{error}</div>}
             <form onSubmit={handleSubmit}>
               {isRegister && (
                 <div className="form-group">
@@ -114,12 +132,14 @@ export default function Login({ onLogin }) {
                 {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
               </button>
             </form>
-            <button className="btn btn-demo" onClick={fillDemo}>
-              Auto Fill Demo Credentials
+            <button type="button" className="btn btn-demo" disabled={!demoEnabled || loading} onClick={loginDemo}>
+              Log In as Demo
             </button>
+            <button type="button" className="btn btn-secondary btn-full" disabled={!demoEnabled || loading} onClick={fillDemo}>Fill credentials</button>
+            {!demoEnabled && <p className="login-subtitle">Demo credentials are unavailable. Use your existing account.</p>}
             <div className="login-switch">
               {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button onClick={() => setIsRegister(!isRegister)}>
+              <button disabled={loading} onClick={() => setIsRegister(!isRegister)}>
                 {isRegister ? 'Sign In' : 'Sign Up'}
               </button>
             </div>

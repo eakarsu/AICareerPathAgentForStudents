@@ -15,7 +15,7 @@ export default function ScholarshipEligibility() {
           placeholder: '{ "gpa": 3.7, "field_of_study": "Computer Science", "year": "Junior", "ethnicity": "Hispanic", "location": "Texas", "extracurriculars": ["Robotics Club", "Math Tutor"], "income_bracket": "low_income", "first_generation": true, "essays": "Strong writing samples" }',
           help: 'Provide profile as JSON to get a personalized match analysis.' },
       ]}
-      onSubmit={async (data) => (await aiApi.scholarshipEligibility(data)).data}
+      onSubmit={async (data, config) => (await aiApi.scholarshipEligibility(data, config)).data}
       renderResult={(r) => (
         <div className="ai-response-container">
           <div className="ai-response-header">

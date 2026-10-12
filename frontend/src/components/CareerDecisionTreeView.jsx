@@ -35,7 +35,7 @@ export default function CareerDecisionTreeView() {
   return (
     <div style={card} data-testid="course-job-heatmap">
       <h3 style={h3}>Course - Role Match Heatmap</h3>
-      <p style={muted}>VIZ — how well each course prepares you for each role (overlap score 0–1).</p>
+      <p style={muted}>Local illustrative course-to-role overlap chart; course examples are not live provider listings.</p>
       <div style={row}>
         <button onClick={run} disabled={loading} style={btn}>{loading ? 'Loading…' : 'Refresh Heatmap'}</button>
       </div>

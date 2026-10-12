@@ -1,5 +1,6 @@
 import React from 'react';
 import FeaturePage from '../components/FeaturePage';
+import ResumeEnhancement from '../components/ResumeEnhancement';
 
 const fields = [
   { key: 'title', label: 'Resume Title', placeholder: 'e.g. Software Engineer Resume' },
@@ -28,6 +29,7 @@ const aiFeature = {
 
 export default function Resumes() {
   return (
+    <>
     <FeaturePage
       title="Resume Builder"
       icon="📄"
@@ -39,5 +41,7 @@ export default function Resumes() {
       cardDescField="content"
       aiFeature={aiFeature}
     />
+    <ResumeEnhancement/>
+    </>
   );
 }

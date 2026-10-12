@@ -1,260 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import axios from 'axios';
 import DetailModal from './DetailModal';
 import FormModal from './FormModal';
-import AIResponseDisplay from './AIResponseDisplay';
-
-export default function FeaturePage({
-  title,
-  icon,
-  apiEndpoint,
-  fields,
-  displayFields,
-  cardTitleField,
-  cardSubtitleField,
-  cardDescField,
-  aiFeature,
-}) {
-  const [items, setItems] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [showDetail, setShowDetail] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState('');
-  const [aiFormData, setAiFormData] = useState({});
-  const [showAiPanel, setShowAiPanel] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
-
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const fetchItems = async () => {
-    try {
-      const { data } = await axios.get(`/api/${apiEndpoint}`, { headers });
-      const items = Array.isArray(data) ? data : data?.data;
-      if (!Array.isArray(items)) throw new Error('Invalid list response');
-      setItems(items);
-    } catch (err) {
-      console.error('Error fetching items:', err);
-    }
-    setLoading(false);
-  };
-
-  const handleRowClick = (item) => {
-    setSelectedItem(item);
-    setShowDetail(true);
-  };
-
-  const handleEdit = (item) => {
-    setEditItem(item);
-    setShowDetail(false);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-    try {
-      await axios.delete(`/api/${apiEndpoint}/${id}`, { headers });
-      setItems(items.filter((i) => i.id !== id));
-      setShowDetail(false);
-    } catch (err) {
-      console.error('Error deleting:', err);
-    }
-  };
-
-  const handleSave = async (formData) => {
-    try {
-      if (formData.id) {
-        const { data } = await axios.put(`/api/${apiEndpoint}/${formData.id}`, formData, { headers });
-        setItems(items.map((i) => (i.id === data.id ? data : i)));
-      } else {
-        const { data } = await axios.post(`/api/${apiEndpoint}`, formData, { headers });
-        setItems([data, ...items]);
-      }
-      setShowForm(false);
-      setEditItem(null);
-    } catch (err) {
-      console.error('Error saving:', err);
-    }
-  };
-
-  const handleAiSubmit = async () => {
-    setAiLoading(true);
-    setAiResponse('');
-    try {
-      const { data } = await axios.post(`/api/${apiEndpoint}/${aiFeature.endpoint}`, aiFormData, { headers });
-      const responseKey = Object.keys(data)[0];
-      setAiResponse(data[responseKey]);
-    } catch (err) {
-      setAiResponse('Error: ' + (err.response?.data?.error || 'Failed to get AI response'));
-    }
-    setAiLoading(false);
-  };
-
-  const filteredItems = items.filter((item) => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return Object.values(item).some(
-      (val) => typeof val === 'string' && val.toLowerCase().includes(search)
-    );
-  });
-
-  return (
-    <div className="feature-page">
-      <div className="page-header">
-        <div className="page-title">
-          <span className="page-icon">{icon}</span>
-          <div>
-            <h1>{title}</h1>
-            <p>{filteredItems.length} items</p>
-          </div>
-        </div>
-        <div className="page-actions">
-          {aiFeature && (
-            <button className="btn btn-ai" onClick={() => setShowAiPanel(!showAiPanel)}>
-              🤖 AI {aiFeature.label}
-            </button>
-          )}
-          <button className="btn btn-primary" onClick={() => { setEditItem(null); setShowForm(true); }}>
-            + New Item
-          </button>
-        </div>
-      </div>
-
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {showAiPanel && aiFeature && (
-        <div className="ai-panel">
-          <div className="ai-panel-header">
-            <h3>🤖 {aiFeature.label}</h3>
-            <button className="btn-close" onClick={() => setShowAiPanel(false)}>&times;</button>
-          </div>
-          <div className="ai-panel-body">
-            {aiFeature.fields.map((field) => (
-              <div key={field.key} className="form-group">
-                <label>{field.label}</label>
-                {field.type === 'textarea' ? (
-                  <textarea
-                    value={aiFormData[field.key] || ''}
-                    onChange={(e) => setAiFormData({ ...aiFormData, [field.key]: e.target.value })}
-                    placeholder={field.placeholder}
-                    rows={2}
-                  />
-                ) : field.type === 'select' ? (
-                  <select
-                    value={aiFormData[field.key] || ''}
-                    onChange={(e) => setAiFormData({ ...aiFormData, [field.key]: e.target.value })}
-                  >
-                    <option value="">Select...</option>
-                    {field.options?.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={aiFormData[field.key] || ''}
-                    onChange={(e) => setAiFormData({ ...aiFormData, [field.key]: e.target.value })}
-                    placeholder={field.placeholder}
-                  />
-                )}
-              </div>
-            ))}
-            <button className="btn btn-ai" onClick={handleAiSubmit} disabled={aiLoading}>
-              {aiLoading ? (
-                <span className="loading-dots">Analyzing<span>.</span><span>.</span><span>.</span></span>
-              ) : (
-                `🤖 Get AI ${aiFeature.label}`
-              )}
-            </button>
-          </div>
-          {aiResponse && <AIResponseDisplay content={aiResponse} title={`AI ${aiFeature.label}`} />}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Loading...</p>
-        </div>
-      ) : filteredItems.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">{icon}</span>
-          <h3>No items found</h3>
-          <p>Get started by adding a new item or adjusting your search.</p>
-          <button className="btn btn-primary" onClick={() => { setEditItem(null); setShowForm(true); }}>
-            + Add First Item
-          </button>
-        </div>
-      ) : (
-        <div className="data-table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                {displayFields.map((f) => (
-                  <th key={f.key}>{f.label}</th>
-                ))}
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((item, idx) => (
-                <tr key={item.id} onClick={() => handleRowClick(item)} className="table-row-clickable">
-                  <td>{idx + 1}</td>
-                  {displayFields.map((f) => (
-                    <td key={f.key}>
-                      <span className={f.badge ? 'badge badge-' + (item[f.key]?.toLowerCase().replace(/\s+/g, '-') || 'default') : ''}>
-                        {item[f.key]?.length > 80 ? item[f.key].substring(0, 80) + '...' : item[f.key] || 'N/A'}
-                      </span>
-                    </td>
-                  ))}
-                  <td>
-                    <div className="row-actions" onClick={(e) => e.stopPropagation()}>
-                      <button className="btn-icon btn-edit" onClick={() => handleEdit(item)} title="Edit">✏️</button>
-                      <button className="btn-icon btn-delete" onClick={() => handleDelete(item.id)} title="Delete">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {showDetail && selectedItem && (
-        <DetailModal
-          item={selectedItem}
-          fields={fields}
-          onClose={() => setShowDetail(false)}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          title={selectedItem[cardTitleField] || title}
-        />
-      )}
-
-      {showForm && (
-        <FormModal
-          item={editItem}
-          fields={fields}
-          onClose={() => { setShowForm(false); setEditItem(null); }}
-          onSave={handleSave}
-          title={title}
-        />
-      )}
-    </div>
-  );
+import AIFeatureForm from './AIFeatureForm';
+const readable=value=>value===null||value===undefined||value===''?'Not provided':typeof value==='object'?JSON.stringify(value):String(value);
+const errorMessage=error=>error.response?.data?.error||error.response?.data?.errors?.map(e=>e.msg).join('; ')||error.message||'Request failed';
+export default function FeaturePage({title,icon,apiEndpoint,fields,displayFields,cardTitleField,aiFeature}){
+  const [items,setItems]=useState([]),[selected,setSelected]=useState(null),[editing,setEditing]=useState(undefined),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[formError,setFormError]=useState(''),[showAI,setShowAI]=useState(false),[search,setSearch]=useState('');
+  const controller=useRef(null),token=localStorage.getItem('token'),headers=useMemo(()=>({Authorization:`Bearer ${token}`}),[token]);
+  const load=useCallback(async()=>{
+    controller.current?.abort();const current=new AbortController();controller.current=current;setLoading(true);setError('');
+    try{const {data}=await axios.get(`/api/${apiEndpoint}`,{headers,signal:current.signal,params:{limit:100}});const rows=Array.isArray(data)?data:data?.data;if(!Array.isArray(rows)||rows.some(row=>!row||row.id===undefined))throw new Error('The server returned an invalid record list.');if(!current.signal.aborted)setItems(rows);}
+    catch(err){if(!current.signal.aborted)setError(errorMessage(err));}finally{if(!current.signal.aborted)setLoading(false);}
+  },[apiEndpoint,headers]);
+  useEffect(()=>{load();return()=>controller.current?.abort();},[load]);
+  const open=async item=>{setError('');try{const {data}=await axios.get(`/api/${apiEndpoint}/${item.id}`,{headers});const actual=data?.data??data?.item??data;if(!actual||actual.id!==item.id)throw new Error('The record could not be loaded.');setSelected(actual);}catch(err){setError(errorMessage(err));}};
+  const remove=async id=>{if(!window.confirm('Delete this saved record?'))return;setError('');try{await axios.delete(`/api/${apiEndpoint}/${id}`,{headers});setSelected(null);await load();}catch(err){setError(errorMessage(err));}};
+  const save=async values=>{setSaving(true);setFormError('');const payload=Object.fromEntries(fields.filter(field=>!field.readOnly).map(field=>[field.key,values[field.key]??'']));try{if(editing?.id)await axios.put(`/api/${apiEndpoint}/${editing.id}`,payload,{headers});else await axios.post(`/api/${apiEndpoint}`,payload,{headers});setEditing(undefined);await load();}catch(err){setFormError(errorMessage(err));}finally{setSaving(false);}};
+  const edit=item=>{if(item.canEdit===false){setError(item.recordNotice||'This record is retained for review.');return;}setSelected(null);setFormError('');setEditing(item);};
+  const filtered=items.filter(item=>!search||Object.values(item).some(value=>typeof value==='string'&&value.toLowerCase().includes(search.toLowerCase())));
+  return <section className="feature-page"><div className="page-header"><div className="page-title"><span className="page-icon">{icon}</span><div><h1>{title}</h1><p>{loading?'Loading records…':error?'Records unavailable':`${filtered.length} records`}</p></div></div><div className="page-actions">{aiFeature&&<button className="btn btn-ai" onClick={()=>setShowAI(!showAI)}>AI {aiFeature.label}</button>}<button className="btn btn-primary" onClick={()=>{setFormError('');setEditing(null);}}>+ New Item</button></div></div>
+    <div className="search-bar"><input aria-label="Search records" placeholder="Search…" value={search} onChange={event=>setSearch(event.target.value)}/></div>
+    {showAI&&aiFeature&&<div className="ai-panel"><div className="ai-panel-header"><h3>{aiFeature.label}</h3><button className="btn-close" aria-label="Close AI form" onClick={()=>setShowAI(false)}>×</button></div><AIFeatureForm compact title={aiFeature.label} fields={aiFeature.fields} endpoint={`/${apiEndpoint}/${aiFeature.endpoint}`} onSubmit={async(payload,config)=>(await axios.post(`/api/${apiEndpoint}/${aiFeature.endpoint}`,payload,{...config,headers})).data}/></div>}
+    {error&&<div role="alert" className="error-message">{error}<button className="btn btn-secondary" onClick={load}>Retry</button></div>}
+    {loading?<p role="status">Loading saved records…</p>:!error&&!filtered.length?<p>No matching records. Create a draft or adjust your search.</p>:<div className="data-table-container"><table className="data-table"><thead><tr><th>#</th>{displayFields.map(field=><th key={field.key}>{field.label}</th>)}<th>Actions</th></tr></thead><tbody>{filtered.map((item,index)=><tr key={item.id} className="table-row-clickable" onClick={()=>open(item)}><td>{index+1}</td>{displayFields.map(field=><td key={field.key}>{readable(item[field.key]).slice(0,100)}{item.is_demo&&field.key===displayFields[0]?.key&&<small className="career-record-muted"> · Fictional training draft</small>}</td>)}<td><div className="row-actions" onClick={event=>event.stopPropagation()}><button className="btn-icon" title="Open details" aria-label={`Open record ${item.id}`} onClick={()=>open(item)}>↗</button><button className="btn-icon btn-edit" title="Edit" disabled={item.canEdit===false} onClick={()=>edit(item)}>✎</button><button className="btn-icon btn-delete" title="Delete" disabled={item.canDelete===false} onClick={()=>remove(item.id)}>⌫</button></div></td></tr>)}</tbody></table></div>}
+    {selected&&<DetailModal item={selected} fields={fields} title={selected[cardTitleField]||title} onClose={()=>setSelected(null)} onEdit={edit} onDelete={remove}/>}
+    {editing!==undefined&&<FormModal item={editing} fields={fields} title={title} saving={saving} error={formError} onClose={()=>{if(!saving)setEditing(undefined);}} onSave={save}/>}
+  </section>;
 }

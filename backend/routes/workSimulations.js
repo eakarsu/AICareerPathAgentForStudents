@@ -1,43 +1,14 @@
-const express = require('express');
-const pool = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
-const router = express.Router();
-const states = ['scheduled','in_progress','peer_review','verified'];
-
-router.use(authenticateToken);
-router.get('/', async (_req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM work_simulation_portfolios ORDER BY scheduled_at,id LIMIT 100');
-    res.json({ data: result.rows });
-  } catch (error) { res.status(500).json({ error: 'Unable to load work simulations' }); }
-});
-router.get('/summary', async (_req, res) => {
-  try {
-    const result = await pool.query(`SELECT COUNT(*)::int AS simulations, COUNT(*) FILTER (WHERE status='verified')::int AS verified,
-      ROUND(AVG((communication_score+collaboration_score+creativity_score+critical_thinking_score+leadership_score)/5.0),1) AS average_score
-      FROM work_simulation_portfolios`);
-    res.json(result.rows[0]);
-  } catch (error) { res.status(500).json({ error: 'Unable to summarize simulations' }); }
-});
-router.post('/', async (req, res) => {
-  const { candidateName, simulationType, employerScenario } = req.body || {};
-  if (![candidateName,simulationType,employerScenario].every((v)=>String(v||'').trim())) return res.status(422).json({ error: 'candidateName, simulationType, and employerScenario are required' });
-  try {
-    const ref = `SIM-${Date.now()}`;
-    const result = await pool.query(`INSERT INTO work_simulation_portfolios
-      (simulation_ref,candidate_name,simulation_type,employer_scenario,communication_score,collaboration_score,creativity_score,critical_thinking_score,leadership_score,evidence,reviewer_notes,status,scheduled_at)
-      VALUES($1,$2,$3,$4,0,0,0,0,0,'[]'::jsonb,'Awaiting assessed evidence','scheduled',NOW()+INTERVAL '7 days') RETURNING *`,
-      [ref,candidateName.trim(),simulationType.trim(),employerScenario.trim()]);
-    res.status(201).json({ data: result.rows[0] });
-  } catch (error) { res.status(500).json({ error: 'Unable to schedule simulation' }); }
-});
-router.post('/:id/advance', async (req, res) => {
-  try {
-    const current = await pool.query('SELECT * FROM work_simulation_portfolios WHERE id=$1',[req.params.id]);
-    if (!current.rows[0]) return res.status(404).json({ error: 'Simulation not found' });
-    const next = states[Math.min(states.indexOf(current.rows[0].status)+1,states.length-1)];
-    const result = await pool.query('UPDATE work_simulation_portfolios SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING *',[next,req.params.id]);
-    res.json({ data: result.rows[0] });
-  } catch (error) { res.status(500).json({ error: 'Unable to advance simulation' }); }
-});
-module.exports = router;
+const express=require('express'),pool=require('../config/database'),{authenticateToken}=require('../middleware/auth');
+const router=express.Router();router.use(authenticateToken);
+const handle=fn=>async(req,res)=>{try{await fn(req,res);}catch(error){res.status(error.status||503).json({error:error.status?error.message:'Work simulation records could not be loaded or saved. Retry.'});}};
+const visible='(user_id=$1 OR user_id IS NULL)';
+const present=(row,actor)=>({...row,is_demo:row.is_demo||/^SIM-\d{4}$/.test(row.simulation_ref),canEdit:Number(row.user_id)===Number(actor),canDelete:Number(row.user_id)===Number(actor),recordNotice:row.user_id===null?'Historical shared training record; independent verification is not established.':'Owned planning draft; scores and verification are server-controlled.'});
+router.get('/',handle(async(req,res)=>res.json({data:(await pool.query(`SELECT * FROM work_simulation_portfolios WHERE ${visible} ORDER BY scheduled_at,id LIMIT 100`,[req.user.id])).rows.map(row=>present(row,req.user.id))})));
+router.get('/summary',handle(async(req,res)=>res.json((await pool.query(`SELECT COUNT(*)::int AS simulations,COUNT(*) FILTER (WHERE status='verified' AND user_id IS NOT NULL AND NOT is_demo)::int AS verified FROM work_simulation_portfolios WHERE ${visible}`,[req.user.id])).rows[0])));
+router.get('/:id',handle(async(req,res)=>{const row=(await pool.query(`SELECT * FROM work_simulation_portfolios WHERE ${visible} AND id=$2`,[req.user.id,req.params.id])).rows[0];if(!row)return res.status(404).json({error:'Simulation not found'});res.json(present(row,req.user.id));}));
+const validate=(req,res,next)=>{const permitted=['candidate_name','simulation_type','employer_scenario','candidateName','simulationType','employerScenario'];if(Object.keys(req.body||{}).some(key=>!permitted.includes(key)))return res.status(400).json({error:'Only draft planning fields can be edited. Scores, evidence and verification cannot be assigned.'});const values=[req.body.candidate_name??req.body.candidateName,req.body.simulation_type??req.body.simulationType,req.body.employer_scenario??req.body.employerScenario];if(!values.every(value=>typeof value==='string'&&value.trim()&&value.length<=4000))return res.status(422).json({error:'Complete the profile, exercise type and scenario.'});req.planningValues=values.map(value=>value.trim());next();};
+router.post('/',validate,handle(async(req,res)=>{const ref=`PLAN-${require('node:crypto').randomUUID()}`;const row=(await pool.query(`INSERT INTO work_simulation_portfolios(user_id,simulation_ref,candidate_name,simulation_type,employer_scenario,communication_score,collaboration_score,creativity_score,critical_thinking_score,leadership_score,evidence,reviewer_notes,status,scheduled_at) VALUES($1,$2,$3,$4,$5,0,0,0,0,0,'[]'::jsonb,'Awaiting actual assessed evidence','scheduled',NOW()+INTERVAL '7 days') RETURNING *`,[req.user.id,ref,...req.planningValues])).rows[0];res.status(201).json(present(row,req.user.id));}));
+router.put('/:id',validate,handle(async(req,res)=>{const row=(await pool.query(`UPDATE work_simulation_portfolios SET candidate_name=$1,simulation_type=$2,employer_scenario=$3,updated_at=NOW() WHERE id=$4 AND user_id=$5 AND status IN('scheduled','in_progress') RETURNING *`,[...req.planningValues,req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Owned editable planning draft not found'});res.json(present(row,req.user.id));}));
+router.delete('/:id',handle(async(req,res)=>{const result=await pool.query("DELETE FROM work_simulation_portfolios WHERE id=$1 AND user_id=$2 AND status IN('scheduled','in_progress') RETURNING id",[req.params.id,req.user.id]);if(!result.rowCount)return res.status(404).json({error:'Owned editable planning draft not found'});res.json({deleted:true});}));
+router.post('/:id/advance',handle(async(req,res)=>{const row=(await pool.query('SELECT * FROM work_simulation_portfolios WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Owned planning draft not found'});if(row.status!=='scheduled')return res.status(409).json({error:'Review and verification require actual evidence and an authorized review workflow. They cannot be advanced automatically.'});const updated=(await pool.query("UPDATE work_simulation_portfolios SET status='in_progress',updated_at=NOW() WHERE id=$1 AND user_id=$2 AND status='scheduled' RETURNING *",[req.params.id,req.user.id])).rows[0];res.json({data:present(updated,req.user.id)});}));
+module.exports=router;

@@ -70,12 +70,10 @@ function parseAIJson(raw) {
 }
 
 async function saveAIResult(userId, endpoint, requestData, result) {
-  try {
-    await pool.query(
+  await pool.query(
       `INSERT INTO ai_results (user_id, endpoint, request_data, result_data) VALUES ($1, $2, $3, $4)`,
       [userId, endpoint, JSON.stringify(requestData), JSON.stringify(result)]
     );
-  } catch (_) {}
 }
 
 // POST /api/ai/career-match
@@ -128,7 +126,7 @@ Return at least 10 career matches.`,
       await saveAIResult(req.user.id, 'career-match', req.body, result);
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -182,7 +180,7 @@ router.post(
       await saveAIResult(req.user.id, 'salary-negotiation', req.body, result);
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -239,7 +237,7 @@ router.post(
       await saveAIResult(req.user.id, 'scholarship-eligibility', req.body, result);
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -287,7 +285,7 @@ router.post(
         },
         {
           role: 'user',
-          content: `Build a ${timeline_months}-month personalized learning roadmap.\n\nTarget Career: ${target_career}\nCurrent Level: ${current_level}\nCurrent Skills: ${(current_skills || []).join(', ') || 'Not specified'}\nAvailable Hours/Month: ${monthly_hours || 40}`,
+          content: `Build a ${timeline_months}-month personalized learning roadmap.\n\nTarget Career: ${target_career}\nCurrent Level: ${current_level}\nCurrent Skills: ${(current_skills || []).join(', ') || 'Not specified'}\nAvailable Hours/Month: ${monthly_hours ?? 40}`,
         },
       ]);
 
@@ -295,7 +293,7 @@ router.post(
       await saveAIResult(req.user.id, 'personalized-roadmap', req.body, result);
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -316,10 +314,8 @@ router.post(
 
       // Pull existing user profile signals from db (if mentors table exists)
       let mentorPool = [];
-      try {
-        const r = await pool.query('SELECT id, name, title, expertise, industry, bio FROM mentors LIMIT 50');
-        mentorPool = r.rows;
-      } catch (_) {}
+      const r = await pool.query('SELECT id, name, title, expertise, industry, bio FROM mentors ORDER BY id LIMIT 50');
+      mentorPool = r.rows;
 
       const aiResponse = await callOpenRouter([
         {
@@ -357,7 +353,7 @@ router.post(
       await saveAIResult(req.user.id, 'peer-mentor-match', req.body, result);
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -403,7 +399,7 @@ router.post(
       await saveAIResult(req.user.id, 'company-culture-fit', req.body, result);
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -433,7 +429,7 @@ router.get('/results', authenticateToken, async (req, res) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -461,7 +457,7 @@ router.post(
 
       res.status(201).json({ message: 'Feedback submitted', feedback: result.rows[0] });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );

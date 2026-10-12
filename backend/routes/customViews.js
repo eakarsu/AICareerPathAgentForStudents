@@ -5,36 +5,19 @@
  *   NON-VIZ: 3) /career-plan-pdf      — printable structured career plan
  *            4) /taxonomy             — skill/role taxonomy editor (CRUD)
  *
- * All endpoints synthesize deterministically (no external AI call) so they
- * succeed without OPENROUTER_API_KEY, keeping screenshot/probe stable.
+ * Charts and printable plans use explicit local formulas and templates.
+ * Taxonomy configuration is persisted per authenticated native user.
  */
 const express = require('express');
 const router = express.Router();
 
-// Best-effort auth so endpoints remain probeable if auth shape changes.
-let authMiddleware = (req, _res, next) => next();
-try {
-  const m = require('../middleware/auth');
-  authMiddleware =
-    (typeof m === 'function') ? m :
-    (m.authenticateToken || m.authenticate || m.requireAuth || m.default || authMiddleware);
-} catch (_) { /* no auth available */ }
-
+const {authenticateToken:authMiddleware}=require('../middleware/auth');
+const pool=require('../config/database');
+const {loadTaxonomy,projectRow}=require('../lib/careerTaxonomy');
+const {randomUUID}=require('node:crypto');
 // ---------- helpers ----------
 function clamp01(n) { return Math.max(0, Math.min(1, Number(n) || 0)); }
 function uniq(arr) { return Array.from(new Set((arr || []).filter(Boolean))); }
-
-// Seed role catalog used by radar / heatmap / plan synthesis.
-const ROLE_CATALOG = [
-  { id: 'sde',  title: 'Software Engineer',     skills: ['JavaScript','Python','Algorithms','Git','System Design','Testing'] },
-  { id: 'ds',   title: 'Data Scientist',        skills: ['Python','Statistics','SQL','Machine Learning','Visualization','Pandas'] },
-  { id: 'des',  title: 'UX / Product Designer', skills: ['Figma','User Research','Prototyping','Typography','Wireframing','Empathy'] },
-  { id: 'pm',   title: 'Product Manager',       skills: ['Communication','Roadmapping','Analytics','User Research','Prioritization','Writing'] },
-  { id: 'bio',  title: 'Biomedical Researcher', skills: ['Lab Skills','Biology','Statistics','Scientific Writing','Chemistry','Critical Thinking'] },
-  { id: 'civ',  title: 'Civil Engineer',        skills: ['Math','CAD','Physics','Materials','Project Management','Safety'] },
-  { id: 'edu',  title: 'Teacher / Educator',    skills: ['Pedagogy','Communication','Patience','Curriculum','Empathy','Assessment'] },
-  { id: 'fin',  title: 'Financial Analyst',     skills: ['Excel','Accounting','Statistics','Financial Modeling','Communication','SQL'] },
-];
 
 // Seed course catalog used by course->job heatmap.
 const COURSE_CATALOG = [
@@ -48,16 +31,13 @@ const COURSE_CATALOG = [
   { id: 'fin130',name: 'Corporate Finance',        teaches: ['Excel','Accounting','Financial Modeling','Statistics','SQL'] },
 ];
 
-// In-memory taxonomy store (NON-VIZ #2) — seeded from catalogs but mutable.
-const taxonomyStore = {
-  roles: ROLE_CATALOG.map(r => ({ ...r, skills: [...r.skills] })),
-  skills: uniq(ROLE_CATALOG.flatMap(r => r.skills)).map((name, i) => ({ id: 'sk_' + i, name })),
-  _nextRoleId: 100,
-  _nextSkillId: 100,
-};
-function findRole(id) { return taxonomyStore.roles.find(r => String(r.id) === String(id)); }
-function findSkill(id) { return taxonomyStore.skills.find(s => String(s.id) === String(id)); }
-
+async function ownedRole(req){
+ const {roles}=await loadTaxonomy(pool,req.user.id);
+ const role=req.body?.targetRole?roles.find(row=>row.id===req.body.targetRole):roles[0];
+ if(!role){const error=new Error('Select an available role from your saved taxonomy.');error.status=422;throw error;}
+ return role;
+}
+function failed(res,error){res.status(error.status||503).json({error:error.status?error.message:'Career view could not be loaded or saved. Retry.'});}
 // ============================================================
 // 1) VIZ — Skill-gap radar / bar
 //    POST /api/custom-views/skill-gap-radar
@@ -66,7 +46,7 @@ function findSkill(id) { return taxonomyStore.skills.find(s => String(s.id) === 
 router.post('/skill-gap-radar', authMiddleware, async (req, res) => {
   try {
     const { targetRole, currentSkills = {} } = req.body || {};
-    const role = findRole(targetRole) || taxonomyStore.roles[0];
+    const role = await ownedRole(req);
     const axes = role.skills.map(skill => {
       const current = clamp01((Number(currentSkills[skill]) || 0) / 5);
       const target = 1.0;
@@ -81,11 +61,11 @@ router.post('/skill-gap-radar', authMiddleware, async (req, res) => {
       weakest: [...axes].sort((a, b) => b.gap - a.gap).slice(0, 3).map(a => a.skill),
       recommendation: overallReadiness < 0.4 ? 'Build foundations first.'
         : overallReadiness < 0.75 ? 'Close the 3 weakest gaps.'
-        : 'You are interview-ready; deepen specialization.',
+        : 'Your self-ratings are higher; verify skills before making career decisions.',
       generated_at: new Date().toISOString(),
     });
   } catch (err) {
-    res.status(500).json({ error: 'skill_gap_radar failed', details: String(err.message || err) });
+    failed(res,err);
   }
 });
 
@@ -97,9 +77,10 @@ router.post('/skill-gap-radar', authMiddleware, async (req, res) => {
 router.post('/course-job-heatmap', authMiddleware, async (req, res) => {
   try {
     const reqCourses = (req.body && req.body.courses) || COURSE_CATALOG.map(c => c.id);
-    const reqRoles = (req.body && req.body.roles) || taxonomyStore.roles.map(r => r.id);
+    const taxonomy = await loadTaxonomy(pool,req.user.id);
+    const reqRoles = (req.body && req.body.roles) || taxonomy.roles.map(r => r.id);
     const courses = COURSE_CATALOG.filter(c => reqCourses.includes(c.id));
-    const roles = taxonomyStore.roles.filter(r => reqRoles.includes(r.id));
+    const roles = taxonomy.roles.filter(r => reqRoles.includes(r.id));
 
     const matrix = courses.map(c => ({
       courseId: c.id,
@@ -119,7 +100,7 @@ router.post('/course-job-heatmap', authMiddleware, async (req, res) => {
       generated_at: new Date().toISOString(),
     });
   } catch (err) {
-    res.status(500).json({ error: 'course_job_heatmap failed', details: String(err.message || err) });
+    failed(res,err);
   }
 });
 
@@ -137,7 +118,7 @@ router.post('/career-plan-pdf', authMiddleware, async (req, res) => {
       interests = [],
       skills = [],
     } = req.body || {};
-    const role = findRole(targetRole) || taxonomyStore.roles[0];
+    const role = await ownedRole(req);
 
     const sections = [
       {
@@ -193,7 +174,7 @@ router.post('/career-plan-pdf', authMiddleware, async (req, res) => {
       generated_at: new Date().toISOString(),
     });
   } catch (err) {
-    res.status(500).json({ error: 'career_plan_pdf failed', details: String(err.message || err) });
+    failed(res,err);
   }
 });
 
@@ -207,78 +188,30 @@ router.post('/career-plan-pdf', authMiddleware, async (req, res) => {
 // Implemented under the single mounted /taxonomy router to satisfy the
 // "4 endpoints" requirement; full CRUD is exposed through HTTP verbs.
 // ============================================================
-router.get('/taxonomy', authMiddleware, async (_req, res) => {
-  res.json({
-    feature: 'taxonomy',
-    roles: taxonomyStore.roles,
-    skills: taxonomyStore.skills,
-    generated_at: new Date().toISOString(),
-  });
+router.get('/taxonomy',authMiddleware,async(req,res)=>{
+ try{res.json({feature:'taxonomy',...await loadTaxonomy(pool,req.user.id),generated_at:new Date().toISOString()});}catch(error){failed(res,error);}
 });
-
-router.post('/taxonomy', authMiddleware, async (req, res) => {
-  try {
-    const { type, title, name, skills } = req.body || {};
-    if (type === 'role') {
-      const id = 'role_' + (taxonomyStore._nextRoleId++);
-      const role = { id, title: String(title || name || 'New Role'), skills: Array.isArray(skills) ? skills : [] };
-      taxonomyStore.roles.push(role);
-      return res.json({ feature: 'taxonomy', created: role });
-    }
-    if (type === 'skill') {
-      const id = 'sk_' + (taxonomyStore._nextSkillId++);
-      const skill = { id, name: String(name || title || 'New Skill') };
-      taxonomyStore.skills.push(skill);
-      return res.json({ feature: 'taxonomy', created: skill });
-    }
-    return res.status(400).json({ error: 'type must be "role" or "skill"' });
-  } catch (err) {
-    res.status(500).json({ error: 'taxonomy_create failed', details: String(err.message || err) });
-  }
+const validKind=(req,res,next)=>{if(!['role','skill'].includes(req.params.type||req.body?.type))return res.status(400).json({error:'type must be role or skill.'});next();};
+function values(req){
+ const kind=req.params.type||req.body.type,body=req.body||{},allowed=kind==='role'?['type','title','skills']:['type','name'];
+ if(Object.keys(body).some(key=>!allowed.includes(key))){const error=new Error('Only native taxonomy configuration fields can be edited.');error.status=400;throw error;}
+ const title=kind==='role'?body.title:body.name;
+ if(typeof title!=='string'||!title.trim()||title.length>200){const error=new Error('Enter a name of up to 200 characters.');error.status=422;throw error;}
+ const skills=kind==='role'?body.skills:[];
+ if(!Array.isArray(skills)||skills.length>50||skills.some(skill=>typeof skill!=='string'||!skill.trim()||skill.length>100)||(kind==='role'&&!skills.length)){const error=new Error('Roles need 1–50 named skills.');error.status=422;throw error;}
+ return{kind,title:title.trim(),skills:uniq(skills.map(skill=>skill.trim()))};
+}
+router.get('/taxonomy/:type/:id',authMiddleware,validKind,async(req,res)=>{
+ try{const row=(await pool.query('SELECT * FROM career_taxonomy_entries WHERE user_id=$1 AND kind=$2 AND key=$3',[req.user.id,req.params.type,req.params.id])).rows[0];if(!row)return res.status(404).json({error:'Taxonomy item not found.'});res.json({feature:'taxonomy',item:projectRow(row)});}catch(error){failed(res,error);}
 });
-
-router.put('/taxonomy/:type/:id', authMiddleware, async (req, res) => {
-  try {
-    const { type, id } = req.params;
-    const { title, name, skills } = req.body || {};
-    if (type === 'role') {
-      const role = findRole(id);
-      if (!role) return res.status(404).json({ error: 'role not found' });
-      if (title || name) role.title = String(title || name);
-      if (Array.isArray(skills)) role.skills = skills;
-      return res.json({ feature: 'taxonomy', updated: role });
-    }
-    if (type === 'skill') {
-      const skill = findSkill(id);
-      if (!skill) return res.status(404).json({ error: 'skill not found' });
-      if (name || title) skill.name = String(name || title);
-      return res.json({ feature: 'taxonomy', updated: skill });
-    }
-    return res.status(400).json({ error: 'type must be "role" or "skill"' });
-  } catch (err) {
-    res.status(500).json({ error: 'taxonomy_update failed', details: String(err.message || err) });
-  }
+router.post('/taxonomy',authMiddleware,validKind,async(req,res)=>{
+ try{const {kind,title,skills}=values(req),key=kind+'_'+randomUUID();const row=(await pool.query('INSERT INTO career_taxonomy_entries(user_id,kind,key,title,skills) VALUES($1,$2,$3,$4,$5) RETURNING *',[req.user.id,kind,key,title,JSON.stringify(skills)])).rows[0];res.status(201).json({feature:'taxonomy',created:projectRow(row)});}catch(error){failed(res,error);}
 });
-
-router.delete('/taxonomy/:type/:id', authMiddleware, async (req, res) => {
-  try {
-    const { type, id } = req.params;
-    if (type === 'role') {
-      const i = taxonomyStore.roles.findIndex(r => String(r.id) === String(id));
-      if (i < 0) return res.status(404).json({ error: 'role not found' });
-      const [removed] = taxonomyStore.roles.splice(i, 1);
-      return res.json({ feature: 'taxonomy', deleted: removed });
-    }
-    if (type === 'skill') {
-      const i = taxonomyStore.skills.findIndex(s => String(s.id) === String(id));
-      if (i < 0) return res.status(404).json({ error: 'skill not found' });
-      const [removed] = taxonomyStore.skills.splice(i, 1);
-      return res.json({ feature: 'taxonomy', deleted: removed });
-    }
-    return res.status(400).json({ error: 'type must be "role" or "skill"' });
-  } catch (err) {
-    res.status(500).json({ error: 'taxonomy_delete failed', details: String(err.message || err) });
-  }
+router.put('/taxonomy/:type/:id',authMiddleware,validKind,async(req,res)=>{
+ try{const {kind,title,skills}=values(req);const row=(await pool.query('UPDATE career_taxonomy_entries SET title=$1,skills=$2,updated_at=NOW() WHERE user_id=$3 AND kind=$4 AND key=$5 RETURNING *',[title,JSON.stringify(skills),req.user.id,kind,req.params.id])).rows[0];if(!row)return res.status(404).json({error:'Taxonomy item not found.'});res.json({feature:'taxonomy',updated:projectRow(row)});}catch(error){failed(res,error);}
+});
+router.delete('/taxonomy/:type/:id',authMiddleware,validKind,async(req,res)=>{
+ try{const row=(await pool.query('DELETE FROM career_taxonomy_entries WHERE user_id=$1 AND kind=$2 AND key=$3 RETURNING key',[req.user.id,req.params.type,req.params.id])).rows[0];if(!row)return res.status(404).json({error:'Taxonomy item not found.'});res.json({feature:'taxonomy',deleted:true});}catch(error){failed(res,error);}
 });
 
 // Health probe.

@@ -14,7 +14,7 @@ export default function ResumeBullets() {
         { key: 'experience', label: 'Your Experience to Transform', type: 'textarea', required: true, rows: 6,
           placeholder: 'Describe what you did in plain language; the AI will sharpen it into bullets.' },
       ]}
-      onSubmit={async (data) => (await resumesApi.generateBullets(data)).data}
+      onSubmit={async (data, config) => (await resumesApi.generateBullets(data, config)).data}
       renderResult={(r) => (
         <div className="ai-response-container">
           <div className="ai-response-body">

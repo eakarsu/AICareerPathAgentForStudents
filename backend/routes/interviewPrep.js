@@ -29,7 +29,7 @@ router.get('/', authenticateToken, async (req, res) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -40,7 +40,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -62,7 +62,7 @@ router.post('/', authenticateToken,
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -78,7 +78,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -89,7 +89,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -142,7 +142,7 @@ router.post('/generate-questions', authenticateToken, aiRateLimiter,
 
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -204,7 +204,7 @@ router.post('/evaluate-answer', authenticateToken, aiRateLimiter,
 
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -219,7 +219,7 @@ router.post('/ai-mock-interview', authenticateToken, aiRateLimiter, async (req, 
     ]);
     res.json({ interview: aiResponse });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

@@ -13,7 +13,7 @@ export default function CareerMatch() {
         { key: 'skills', label: 'Your Skills', type: 'tags', required: true, placeholder: 'e.g. Python, React, Communication, Data Analysis', help: 'Comma-separated list' },
         { key: 'interests', label: 'Your Interests', type: 'tags', required: true, placeholder: 'e.g. Machine Learning, Healthcare, Sustainability', help: 'Comma-separated list' },
       ]}
-      onSubmit={async (data) => (await aiApi.careerMatch(data)).data}
+      onSubmit={async (data, config) => (await aiApi.careerMatch(data, config)).data}
       renderResult={(r) => (
         <div className="ai-response-container">
           <div className="ai-response-header">

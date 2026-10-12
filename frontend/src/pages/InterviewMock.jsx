@@ -14,6 +14,7 @@ export default function InterviewMock() {
 
       {step === 'generate' ? (
         <AIFeatureForm
+          key="questions"
           title="Mock Interview — Question Generator"
           icon="🎤"
           description="Get 10 tailored interview questions with what interviewers look for and tips."
@@ -22,7 +23,7 @@ export default function InterviewMock() {
             { key: 'job_title', label: 'Job Title', type: 'text', required: true, placeholder: 'e.g. Backend Engineer' },
             { key: 'experience_level', label: 'Experience Level', type: 'select', required: true, options: ['Intern', 'New Graduate', 'Junior', 'Mid', 'Senior'] },
           ]}
-          onSubmit={async (data) => (await interviewApi.generateQuestions(data)).data}
+          onSubmit={async (data, config) => (await interviewApi.generateQuestions(data, config)).data}
           renderResult={(r) => (
             <div className="ai-response-container">
               <div className="ai-response-body">
@@ -53,6 +54,7 @@ export default function InterviewMock() {
         />
       ) : (
         <AIFeatureForm
+          key="evaluate"
           title="Mock Interview — Answer Evaluation"
           icon="📝"
           description="Score your answer for delivery, clarity, content with STAR breakdown."
@@ -62,7 +64,7 @@ export default function InterviewMock() {
             { key: 'answer', label: 'Your Answer', type: 'textarea', rows: 6, required: true },
             { key: 'job_title', label: 'Job Title (optional)', type: 'text' },
           ]}
-          onSubmit={async (data) => (await interviewApi.evaluateAnswer(data)).data}
+          onSubmit={async (data, config) => (await interviewApi.evaluateAnswer(data, config)).data}
           renderResult={(r) => (
             <div className="ai-response-container">
               <div className="ai-response-body">

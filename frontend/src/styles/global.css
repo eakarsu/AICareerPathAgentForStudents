@@ -11,6 +11,9 @@
   --info: #4299e1;
   --bg-dark: #0f1729;
   --bg-card: #1a2332;
+  --bg-secondary: var(--bg-card);
+  --border-color: var(--border);
+  --accent-secondary: var(--primary-light);
   --bg-card-hover: #1e2a3a;
   --bg-surface: #141d2b;
   --bg-input: #1e2a3a;
@@ -968,3 +971,15 @@ input, textarea, select {
   .data-table { font-size: 0.8rem; }
   .data-table th, .data-table td { padding: 10px 8px; }
 }
+
+/* Native career workspaces: visible whole-form examples and centered record actions. */
+.career-example-toolbar{padding:14px;border:1px solid #475569;background:#0f172a;border-radius:12px;margin-bottom:18px}.career-example-toolbar p{color:#cbd5e1;margin:0 0 12px;font-size:14px}.career-action-row{display:flex;gap:10px;flex-wrap:wrap}.career-action-row .btn{white-space:normal;max-width:100%}.career-notice{padding:12px 16px;color:#cbd5e1}.error-message{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.modal-content{max-height:90vh;display:flex;flex-direction:column;max-width:min(850px,94vw)}.modal-content>form{display:flex;flex-direction:column;min-height:0}.modal-body{overflow:auto;min-height:0}.modal-actions{flex-shrink:0}.career-record-title{overflow-wrap:anywhere}.career-record-muted{color:#94a3b8;font-size:13px}
+
+.main-content{min-width:0}.feature-page,.career-ai-workspace{min-width:0}.career-example-toolbar,.ai-panel-body{overflow-wrap:anywhere}.career-example-toolbar .btn{height:auto}
+
+@media(max-width:768px){.sidebar .logout-btn{font-size:0;width:38px;margin:auto}.sidebar .logout-btn::before{content:"↩";font-size:18px}.sidebar .ai-library-launcher{font-size:0;min-width:0;width:46px;padding:10px;margin:12px}.sidebar .ai-library-launcher span{font-size:20px}.sidebar .ai-library-launcher small{display:none}}
+
+.taxonomy-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px; }
+.taxonomy-grid>div {min-width:0;}
+.taxonomy-grid .table-container {max-height:440px;overflow:auto;}
+@media(max-width:850px){.taxonomy-grid{grid-template-columns:1fr;}}

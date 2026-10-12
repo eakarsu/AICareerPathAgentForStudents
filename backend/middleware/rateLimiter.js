@@ -7,6 +7,8 @@ const WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const MAX_CALLS = 20;
 
 function aiRateLimiter(req, res, next) {
+  if(req.careerQuotaChecked)return next();
+  req.careerQuotaChecked=true;
   const userId = req.user && req.user.id;
   if (!userId) {
     return next();

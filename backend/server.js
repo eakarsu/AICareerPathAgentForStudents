@@ -29,6 +29,19 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 
+const nativePool=require('./config/database');
+const execute=require('./lib/nativeExecution').createExecutionMiddleware({pool:nativePool});
+app.use('/api',(req,res,next)=>{
+ const path=req.path;
+ if(!['POST','PUT','PATCH','DELETE'].includes(req.method)||/^\/(?:auth|governed-plans)(?:\/|$)/.test(path))return next();
+ const provider=/^\/(?:career-chat(?:\/|$)|(?:career-paths|skills|courses|job-trends|interview-prep|mentors|scholarships|networking-events|resumes|portfolios|learning-roadmaps|industry-insights|salary-insights|assessments)\/(?:ai-[^/]+|bullet-generator|generate-questions|evaluate-answer|\d+\/enhance)$|ai\/(?:career-match|salary-negotiation|scholarship-eligibility|personalized-roadmap|peer-mentor-match|company-culture-fit)$|(?:agentic-coach|bls-labor-rag|labor-trend-alerts|district-white-label)\/run$)/.test(path);
+ if(provider)return require('./middleware/auth').authenticateToken(req,res,()=>require('./middleware/rateLimiter').aiRateLimiter(req,res,()=>execute(req,res,next)));
+ execute(req,res,next);
+});
+app.use('/api/dashboard-summary',require('./routes/dashboardSummary'));
+app.use('/api/native-reports',require('./routes/nativeReports'));
+app.use('/api/career-followups',require('./routes/careerFollowups'));
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/career-paths', require('./routes/careerPaths'));
@@ -73,6 +86,17 @@ app.use('/api/custom-views', require('./routes/customViews'));
 app.use('/api/application-deadline-risk', require('./routes/applicationDeadlineRisk'));
 app.use('/api/work-simulations', require('./routes/workSimulations'));
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
-});
+
+// Advisory AI reports only; native execution and approval routes stay unchanged.
+const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
+const aiWorkspaceDatabase = require("./config/database.js");
+app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
+  pool: aiWorkspaceDatabase, authenticateToken: require("./middleware/auth.js").authenticateToken,
+  aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),
+}));
+async function start() {
+  await require('./lib/nativeData').prepareNativeData(nativePool);
+  return app.listen(PORT, () => { console.log(`Backend server running on port ${PORT}`); });
+}
+if (require.main === module) start().catch(() => { console.error('Career workspace setup failed. Existing data was preserved; retry after checking PostgreSQL.'); process.exitCode=1; });
+module.exports={app,start};

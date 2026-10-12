@@ -21,7 +21,7 @@ function TimelineView() {
     <section style={{ padding: 24, color: '#172033' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div>
-          <p style={{ margin: 0, color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase' }}>Custom visualization</p>
+          <p style={{ margin: 0, color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase' }}>Illustrative chart · not live application data</p>
           <h1 style={{ margin: '6px 0 0', fontSize: 30 }}> AI Career Path Agent For Students Insight Map</h1>
         </div>
         <div style={{ padding: '10px 14px', border: '1px solid #d7dde8', borderRadius: 8, background: '#f8fafc' }}>Live scenario model</div>

@@ -26,6 +26,7 @@ router.post('/', authenticateToken, aiRateLimiter, async (req, res) => {
       return res.status(422).json({ error: 'message is required' });
     }
 
+    if(conversation_id){const row=(await pool.query('SELECT id FROM conversations WHERE id=$1 AND user_id=$2',[conversation_id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Conversation not found'});}
     const systemContent = context
       ? `${CAREER_BOT_SYSTEM}\n\nContext: ${context}`
       : CAREER_BOT_SYSTEM;
@@ -37,7 +38,7 @@ router.post('/', authenticateToken, aiRateLimiter, async (req, res) => {
 
     // Persist messages to DB if conversation_id is provided
     if (conversation_id) {
-      try {
+      {
         // Verify conversation belongs to user
         const convCheck = await pool.query(
           'SELECT id FROM conversations WHERE id = $1 AND user_id = $2',
@@ -57,15 +58,12 @@ router.post('/', authenticateToken, aiRateLimiter, async (req, res) => {
             [conversation_id]
           );
         }
-      } catch (dbErr) {
-        // DB persistence failure should not break the AI response
-        console.error('Message persistence error:', dbErr.message);
       }
     }
 
     res.json({ response: aiResponse });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

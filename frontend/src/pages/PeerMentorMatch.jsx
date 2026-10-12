@@ -15,7 +15,7 @@ export default function PeerMentorMatch() {
         { key: 'focus_areas', label: 'Focus Areas', type: 'tags', placeholder: 'Internships, Research, Side Projects' },
         { key: 'learning_style', label: 'Learning Style', type: 'select', options: ['Visual', 'Hands-on', 'Discussion', 'Reading', 'Mixed'] },
       ]}
-      onSubmit={async (data) => (await aiApi.peerMentorMatch(data)).data}
+      onSubmit={async (data, config) => (await aiApi.peerMentorMatch(data, config)).data}
       renderResult={(r) => (
         <div className="ai-response-container">
           <div className="ai-response-header">

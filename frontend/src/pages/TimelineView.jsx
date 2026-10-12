@@ -20,7 +20,7 @@ function TimelineView() {
 
   return (
     <main style={{ padding: 24, color: '#172033' }}>
-      <p style={{ margin: 0, color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase' }}>Custom visualization</p>
+      <p style={{ margin: 0, color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase' }}>Illustrative chart · not live application data</p>
       <h1 style={{ margin: '6px 0 18px', fontSize: 30 }}>AI Career Path Agent For Students Timeline View</h1>
       <section style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 260px', gap: 18 }}>
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Timeline view of operational stages" style={{ width: '100%', minHeight: 300, border: '1px solid #d7dde8', borderRadius: 8, background: '#f8fafc' }}>

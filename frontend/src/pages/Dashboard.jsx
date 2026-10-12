@@ -1,13 +1,14 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
+import api from '../services/api';
 import { Link } from 'react-router-dom';
 
 const features = [
   { path: '/career-paths', icon: '🎯', title: 'Career Paths', desc: 'Explore AI-recommended career paths tailored to your interests and skills', color: '#667eea' },
   { path: '/skills', icon: '⚡', title: 'Skills Gap Analysis', desc: 'Identify skill gaps and get personalized learning recommendations', color: '#f093fb' },
   { path: '/courses', icon: '📚', title: 'Course Recommendations', desc: 'Discover top courses from leading platforms to build your skills', color: '#4facfe' },
-  { path: '/job-trends', icon: '📊', title: 'Job Market Trends', desc: 'Stay updated with real-time job market data and growth predictions', color: '#43e97b' },
+  { path: '/job-trends', icon: '📊', title: 'Job Market Trends', desc: 'Review the saved job-market catalog and AI planning suggestions', color: '#43e97b' },
   { path: '/interview-prep', icon: '🎤', title: 'Interview Prep', desc: 'Practice with AI-generated interview questions and expert tips', color: '#fa709a' },
-  { path: '/mentors', icon: '🤝', title: 'Mentorship', desc: 'Connect with industry mentors who can guide your career journey', color: '#a18cd1' },
+  { path: '/mentors', icon: '🤝', title: 'Mentorship', desc: 'Review mentorship references and plan questions; verify availability yourself', color: '#a18cd1' },
   { path: '/scholarships', icon: '🎓', title: 'Scholarships', desc: 'Find scholarships and funding opportunities for your education', color: '#fccb90' },
   { path: '/networking-events', icon: '🌐', title: 'Networking Events', desc: 'Discover conferences, hackathons, and networking opportunities', color: '#96fbc4' },
   { path: '/resumes', icon: '📄', title: 'Resume Builder', desc: 'Build professional resumes with AI-powered suggestions', color: '#f5576c' },
@@ -30,6 +31,9 @@ const features = [
 ];
 
 export default function Dashboard() {
+  const [summary,setSummary]=useState(null),[error,setError]=useState('');
+  const load=async()=>{setError('');try{const {data}=await api.get('/dashboard-summary');if(!['careerPaths','records','reports'].every(key=>Number.isFinite(data[key])))throw new Error('The dashboard returned invalid counts.');setSummary(data);}catch(error){setError(error.response?.data?.error||error.message);}};
+  useEffect(()=>{load();},[]);
   return (
     <div className="dashboard">
       <div className="dashboard-header">
@@ -39,19 +43,21 @@ export default function Dashboard() {
         </div>
         <div className="dashboard-stats">
           <div className="stat-card">
-            <span className="stat-number">15+</span>
-            <span className="stat-label">AI-Powered Tools</span>
+            <span className="stat-number">{summary?summary.records:error?'Unavailable':'Loading…'}</span>
+            <span className="stat-label">Your saved records</span>
           </div>
           <div className="stat-card">
-            <span className="stat-number">100+</span>
+            <span className="stat-number">{summary?summary.careerPaths:error?'Unavailable':'Loading…'}</span>
             <span className="stat-label">Career Paths</span>
           </div>
           <div className="stat-card">
-            <span className="stat-number">24/7</span>
-            <span className="stat-label">AI Counselor</span>
+            <span className="stat-number">{summary?summary.reports:error?'Unavailable':'Loading…'}</span>
+            <span className="stat-label">Your completed AI reports</span>
           </div>
         </div>
       </div>
+      {error&&<div className="error-message" role="alert">{error}<button className="btn btn-secondary" onClick={load}>Retry</button></div>}
+      <p className="career-notice">Saved catalogs are reference data. Verify current opportunities and source claims before relying on AI guidance.</p>
       <div className="dashboard-grid">
         {features.map((feature) => (
           <Link key={feature.path} to={feature.path} className="feature-card">

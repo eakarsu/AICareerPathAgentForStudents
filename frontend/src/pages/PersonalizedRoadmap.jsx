@@ -16,7 +16,7 @@ export default function PersonalizedRoadmap() {
         { key: 'monthly_hours', label: 'Available Hours/Month', type: 'number', placeholder: '40' },
         { key: 'current_skills', label: 'Current Skills', type: 'tags', placeholder: 'Python, Statistics, SQL' },
       ]}
-      onSubmit={async (data) => (await aiApi.personalizedRoadmap(data)).data}
+      onSubmit={async (data, config) => (await aiApi.personalizedRoadmap(data, config)).data}
       renderResult={(r) => (
         <div className="ai-response-container">
           <div className="ai-response-header">

@@ -16,12 +16,12 @@ router.get('/', authenticateToken, async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query('SELECT COUNT(*) FROM resumes');
+    const countResult = await pool.query('SELECT COUNT(*) FROM resumes WHERE user_id=$1', [req.user.id]);
     const total = parseInt(countResult.rows[0].count);
 
     const result = await pool.query(
-      'SELECT * FROM resumes ORDER BY created_at DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
+      'SELECT * FROM resumes WHERE user_id=$1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+      [req.user.id, limit, offset]
     );
 
     res.json({
@@ -29,18 +29,18 @@ router.get('/', authenticateToken, async (req, res) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
 // GET /api/resumes/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM resumes WHERE id = $1', [req.params.id]);
+    const result = await pool.query('SELECT * FROM resumes WHERE id = $1 AND user_id=$2', [req.params.id,req.user.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -62,16 +62,14 @@ router.post('/', authenticateToken,
       );
 
       // Save initial version
-      try {
-        await pool.query(
+      await pool.query(
           'INSERT INTO resume_versions (resume_id, content, version, change_note) VALUES ($1, $2, 1, $3)',
           [result.rows[0].id, content, 'Initial version']
         );
-      } catch (_) {}
 
       res.status(201).json(result.rows[0]);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -81,13 +79,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { title, content, target_role, experience_level } = req.body;
     const result = await pool.query(
-      'UPDATE resumes SET title=$1, content=$2, target_role=$3, experience_level=$4 WHERE id=$5 RETURNING *',
-      [title, content, target_role, experience_level, req.params.id]
+      'UPDATE resumes SET title=$1, content=$2, target_role=$3, experience_level=$4 WHERE id=$5 AND user_id=$6 RETURNING *',
+      [title, content, target_role, experience_level, req.params.id, req.user.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
 
     // Save version on update
-    try {
+    {
       const versionCount = await pool.query(
         'SELECT COUNT(*) FROM resume_versions WHERE resume_id = $1',
         [req.params.id]
@@ -97,22 +95,22 @@ router.put('/:id', authenticateToken, async (req, res) => {
         'INSERT INTO resume_versions (resume_id, content, version, change_note) VALUES ($1, $2, $3, $4)',
         [req.params.id, content, nextVersion, 'Manual update']
       );
-    } catch (_) {}
+    }
 
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
 // DELETE /api/resumes/:id
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM resumes WHERE id = $1 RETURNING *', [req.params.id]);
+    const result = await pool.query('DELETE FROM resumes WHERE id = $1 AND user_id=$2 RETURNING *', [req.params.id,req.user.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -126,10 +124,16 @@ router.post('/:id/enhance', authenticateToken, aiRateLimiter,
     if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
     try {
-      const resumeResult = await pool.query('SELECT * FROM resumes WHERE id = $1', [req.params.id]);
+      const resumeResult = await pool.query('SELECT * FROM resumes WHERE id = $1 AND user_id=$2', [req.params.id,req.user.id]);
       if (resumeResult.rows.length === 0) return res.status(404).json({ error: 'Resume not found' });
 
       const resume = resumeResult.rows[0];
+      const context=require('../lib/nativeExecution').current();
+      if(context){
+        const snapshot=JSON.stringify(resume);
+        context.nativeSource={table:'resumes',id:resume.id,sha256:require('node:crypto').createHash('sha256').update(snapshot).digest('hex')};
+        context.verifySources=async(request,actor,db,lock)=>{const latest=(await db.query('SELECT * FROM resumes WHERE id=$1 AND user_id=$2'+(lock?' FOR SHARE':''),[resume.id,actor.id])).rows[0];if(!latest||JSON.stringify(latest)!==snapshot)throw Object.assign(new Error('The selected resume changed. Reload the source before generating.'),{status:409});};
+      }
       const { job_description } = req.body;
 
       const aiResponse = await callOpenRouter([
@@ -160,7 +164,7 @@ router.post('/:id/enhance', authenticateToken, aiRateLimiter,
       }
 
       // Save enhanced version
-      try {
+      {
         const versionCount = await pool.query(
           'SELECT COUNT(*) FROM resume_versions WHERE resume_id = $1',
           [req.params.id]
@@ -170,11 +174,11 @@ router.post('/:id/enhance', authenticateToken, aiRateLimiter,
           'INSERT INTO resume_versions (resume_id, content, version, change_note) VALUES ($1, $2, $3, $4)',
           [req.params.id, JSON.stringify(enhancedData), nextVersion, `AI enhanced for: ${job_description.substring(0, 100)}`]
         );
-      } catch (_) {}
+      }
 
       res.json(enhancedData);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -217,7 +221,7 @@ router.post('/bullet-generator', authenticateToken, aiRateLimiter,
 
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -232,7 +236,7 @@ router.post('/ai-build', authenticateToken, aiRateLimiter, async (req, res) => {
     ]);
     res.json({ resume: aiResponse });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

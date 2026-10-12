@@ -1,121 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import axios from 'axios';
 import AIResponseDisplay from '../components/AIResponseDisplay';
-
-export default function CareerChat() {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hello! I\'m CareerBot, your AI career counselor. I can help you with:\n\n- **Career path exploration** - Find careers that match your interests\n- **Skills development** - Identify what skills to learn\n- **Interview preparation** - Practice for your dream job\n- **Resume tips** - Make your application stand out\n- **Industry insights** - Understand market trends\n- **Salary negotiation** - Know your worth\n\nWhat would you like to explore today?' }
-  ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef(null);
-  const token = localStorage.getItem('token');
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
-
-    const userMessage = input.trim();
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setLoading(true);
-
-    try {
-      const { data } = await axios.post('/api/career-chat', {
-        message: userMessage,
-        context: messages.slice(-6).map(m => `${m.role}: ${m.content}`).join('\n')
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
-    }
-    setLoading(false);
-  };
-
-  const quickPrompts = [
-    'What career suits someone who loves both coding and creativity?',
-    'How do I prepare for a tech interview?',
-    'What are the highest-paying entry-level tech jobs?',
-    'How can I build a strong portfolio as a student?',
-    'What skills should I learn for AI/ML careers?',
-    'How do I negotiate my first salary offer?',
-  ];
-
-  return (
-    <div className="chat-page">
-      <div className="chat-header">
-        <span className="chat-header-icon">🤖</span>
-        <div>
-          <h1>AI Career Counselor</h1>
-          <p>Powered by AI - Get personalized career guidance instantly</p>
-        </div>
-      </div>
-
-      <div className="chat-container">
-        <div className="chat-messages">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`chat-message ${msg.role}`}>
-              <div className="message-avatar">
-                {msg.role === 'user' ? '👤' : '🤖'}
-              </div>
-              <div className="message-content">
-                {msg.role === 'assistant' ? (
-                  <AIResponseDisplay content={msg.content} />
-                ) : (
-                  <p>{msg.content}</p>
-                )}
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div className="chat-message assistant">
-              <div className="message-avatar">🤖</div>
-              <div className="message-content">
-                <div className="typing-indicator">
-                  <span></span><span></span><span></span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {messages.length <= 1 && (
-          <div className="quick-prompts">
-            <p className="quick-prompts-label">Try asking:</p>
-            <div className="quick-prompts-grid">
-              {quickPrompts.map((prompt, idx) => (
-                <button
-                  key={idx}
-                  className="quick-prompt-btn"
-                  onClick={() => setInput(prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <form className="chat-input-form" onSubmit={sendMessage}>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me anything about your career..."
-            disabled={loading}
-          />
-          <button type="submit" disabled={loading || !input.trim()}>
-            {loading ? '...' : '➤'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+const examples=[
+ {label:'Technology student',message:'Suggest a first supervised software portfolio project and a six-week learning plan.',context:'Fictional second-year student; JavaScript basics; six hours per week; no verified work experience.'},
+ {label:'Creative career changer',message:'Compare entry-level UX research and visual design pathways with low-cost practice steps.',context:'Fictional career changer; writing and design coursework; four hours per week; no verified credentials.'},
+ {label:'Community services student',message:'Plan a practice informational interview and three steps toward community-program work.',context:'Fictional first-year student; teamwork and public speaking interests; limited budget; no actual employer or application.'},
+];
+export default function CareerChat(){
+ const [messages,setMessages]=useState([]),[input,setInput]=useState(''),[context,setContext]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');const active=useRef(null),sequence=useRef(0);
+ useEffect(()=>()=>{sequence.current++;active.current?.abort();},[]);
+ const cancel=()=>{sequence.current++;active.current?.abort();active.current=null;setBusy(false);setNotice('Request cancelled.');};
+ const send=async event=>{event.preventDefault();if(busy||!input.trim())return;const id=++sequence.current,controller=new AbortController();active.current=controller;setBusy(true);setError('');setNotice('');const message=input.trim();try{const {data}=await axios.post('/api/career-chat',{message,context},{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`},signal:controller.signal});if(!controller.signal.aborted&&id===sequence.current){setMessages(current=>[...current,{role:'user',content:message},{role:'assistant',content:data.response}]);setNotice('Completed response saved to AI History.');}}catch(err){if(!controller.signal.aborted&&id===sequence.current)setError(err.response?.data?.error||err.message);}finally{if(id===sequence.current){active.current=null;setBusy(false);}}};
+ return <section className="feature-page"><h1>AI Career Counselor</h1><p>Review career options with OpenRouter. Suggestions do not establish eligibility, credentials, or current market facts.</p><form onSubmit={send}><div className="career-example-toolbar"><p>Demo AI fills every field, including optional context. No request is sent until Generate.</p><div className="career-action-row">{examples.map(example=><button className="btn btn-secondary" disabled={busy} type="button" key={example.label} onClick={()=>{setInput(example.message);setContext(example.context);setError('');}} >Demo AI · {example.label}</button>)}</div></div><div className="form-group"><label htmlFor="career-message">Message *</label><textarea id="career-message" name="message" required disabled={busy} value={input} onChange={event=>setInput(event.target.value)}/></div><div className="form-group"><label htmlFor="career-context">Background / context (optional)</label><textarea id="career-context" name="context" disabled={busy} value={context} onChange={event=>setContext(event.target.value)}/></div><div className="career-action-row"><button className="btn btn-ai" disabled={busy||!input.trim()}>{busy?'Generating…':'Generate with OpenRouter'}</button><button className="btn btn-secondary" type="button" disabled={!busy} onClick={cancel}>Cancel</button></div></form>{error&&<p className="error-message" role="alert">{error} Review the message and Generate again to retry.</p>}{notice&&<p role="status">{notice}</p>}{messages.map((message,index)=>message.role==='assistant'?<AIResponseDisplay key={index} content={message.content} title="Career guidance"/>:<p key={index}><strong>You:</strong> {message.content}</p>)}</section>;
 }

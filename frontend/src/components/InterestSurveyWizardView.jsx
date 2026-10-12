@@ -1,134 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React,{useEffect,useState} from 'react';
 import api from '../services/api';
-
-// NON-VIZ #2: Skill / Role taxonomy editor (full CRUD).
-// Filename kept (InterestSurveyWizardView) for stable imports; semantics replaced.
-export default function InterestSurveyWizardView() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
-
-  // Forms
-  const [newRoleTitle, setNewRoleTitle] = useState('');
-  const [newRoleSkills, setNewRoleSkills] = useState('');
-  const [newSkillName, setNewSkillName] = useState('');
-
-  const load = async () => {
-    setLoading(true); setErr(null);
-    try {
-      const res = await api.get('/custom-views/taxonomy');
-      setData(res.data);
-    } catch (e) {
-      setErr(e.response?.data?.error || e.message);
-    } finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
-
-  const addRole = async () => {
-    if (!newRoleTitle.trim()) return;
-    try {
-      await api.post('/custom-views/taxonomy', {
-        type: 'role',
-        title: newRoleTitle,
-        skills: newRoleSkills.split(',').map(s => s.trim()).filter(Boolean),
-      });
-      setNewRoleTitle(''); setNewRoleSkills('');
-      await load();
-    } catch (e) { setErr(e.response?.data?.error || e.message); }
-  };
-  const addSkill = async () => {
-    if (!newSkillName.trim()) return;
-    try {
-      await api.post('/custom-views/taxonomy', { type: 'skill', name: newSkillName });
-      setNewSkillName('');
-      await load();
-    } catch (e) { setErr(e.response?.data?.error || e.message); }
-  };
-  const rename = async (type, id, current) => {
-    const next = window.prompt(`Rename ${type}:`, current);
-    if (!next || next === current) return;
-    try {
-      await api.put(`/custom-views/taxonomy/${type}/${id}`, type === 'role' ? { title: next } : { name: next });
-      await load();
-    } catch (e) { setErr(e.response?.data?.error || e.message); }
-  };
-  const remove = async (type, id) => {
-    if (!window.confirm(`Delete this ${type}?`)) return;
-    try {
-      await api.delete(`/custom-views/taxonomy/${type}/${id}`);
-      await load();
-    } catch (e) { setErr(e.response?.data?.error || e.message); }
-  };
-
-  return (
-    <div style={card} data-testid="taxonomy-editor">
-      <h3 style={h3}>Skill / Role Taxonomy Editor</h3>
-      <p style={muted}>NON-VIZ — full CRUD over the role + skill catalog used by all other views.</p>
-
-      {loading && <div style={{ color: '#94a3b8' }}>Loading…</div>}
-      {err && <div style={errBox}>Error: {err}</div>}
-
-      {data && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
-          {/* Roles */}
-          <div style={pane}>
-            <h4 style={paneH}>Roles ({data.roles.length})</h4>
-            <div style={row}>
-              <input style={inp} placeholder="New role title" value={newRoleTitle} onChange={e => setNewRoleTitle(e.target.value)} />
-              <input style={inp} placeholder="skills, comma, separated" value={newRoleSkills} onChange={e => setNewRoleSkills(e.target.value)} />
-              <button style={btn} onClick={addRole}>+ Add Role</button>
-            </div>
-            <ul style={list}>
-              {data.roles.map(r => (
-                <li key={r.id} style={li}>
-                  <div>
-                    <div style={{ color: '#f1f5f9', fontWeight: 600 }}>{r.title}</div>
-                    <div style={{ color: '#94a3b8', fontSize: 11 }}>{(r.skills || []).join(', ')}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button style={miniBtn} onClick={() => rename('role', r.id, r.title)}>Rename</button>
-                    <button style={miniDel} onClick={() => remove('role', r.id)}>Delete</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Skills */}
-          <div style={pane}>
-            <h4 style={paneH}>Skills ({data.skills.length})</h4>
-            <div style={row}>
-              <input style={inp} placeholder="New skill name" value={newSkillName} onChange={e => setNewSkillName(e.target.value)} />
-              <button style={btn} onClick={addSkill}>+ Add Skill</button>
-            </div>
-            <ul style={list}>
-              {data.skills.map(s => (
-                <li key={s.id} style={li}>
-                  <div style={{ color: '#f1f5f9' }}>{s.name}</div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button style={miniBtn} onClick={() => rename('skill', s.id, s.name)}>Rename</button>
-                    <button style={miniDel} onClick={() => remove('skill', s.id)}>Delete</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+import FormModal from './FormModal';
+import DetailModal from './DetailModal';
+const roleFields=[{key:'title',label:'Role title'},{key:'skills',label:'Skills (comma separated)',type:'textarea'}];
+const skillFields=[{key:'name',label:'Skill name'}];
+const message=error=>error.response?.data?.error||error.message||'Taxonomy could not be loaded or saved.';
+export default function InterestSurveyWizardView(){
+ const [data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState(null),[form,setForm]=useState(null),[saving,setSaving]=useState(false),[modalError,setModalError]=useState(''),[deleting,setDeleting]=useState(false);
+ const load=async()=>{setLoading(true);setError('');try{const {data:rows}=await api.get('/custom-views/taxonomy');if(!Array.isArray(rows.roles)||!Array.isArray(rows.skills)||[...rows.roles,...rows.skills].some(row=>!row.id))throw Error('Taxonomy returned an invalid record list.');setData(rows);}catch(error){setError(message(error));setData(null);}finally{setLoading(false);}};
+ useEffect(()=>{load();},[]);
+ const close=()=>{if(saving)return;setSelected(null);setForm(null);setDeleting(false);setModalError('');};
+ const open=async(kind,id)=>{setError('');try{const {data:detail}=await api.get('/custom-views/taxonomy/'+kind+'/'+encodeURIComponent(id));if(!detail.item?.id)throw Error('Taxonomy detail was unavailable.');setSelected({kind,item:{...detail.item,skills:detail.item.skills?.join(', '),recordNotice:detail.item.demo_label||'Saved taxonomy configuration; no verified career assessment.'}});}catch(error){setError(message(error));}};
+ const updated=async()=>{window.dispatchEvent(new Event('career-taxonomy-updated'));await load();};
+ const save=async values=>{setSaving(true);setModalError('');try{const body=form.kind==='role'?{title:values.title,skills:String(values.skills||'').split(',').map(value=>value.trim()).filter(Boolean)}:{name:values.name};if(form.item){await api.put('/custom-views/taxonomy/'+form.kind+'/'+encodeURIComponent(form.item.id),body);}else{await api.post('/custom-views/taxonomy',{type:form.kind,...body});}setForm(null);setSelected(null);await updated();}catch(error){setModalError(message(error));}finally{setSaving(false);}};
+ const remove=async()=>{setSaving(true);setModalError('');try{await api.delete('/custom-views/taxonomy/'+selected.kind+'/'+encodeURIComponent(selected.item.id));setSelected(null);setDeleting(false);await updated();}catch(error){setModalError(message(error));}finally{setSaving(false);}};
+ return <section className="card" data-testid="taxonomy-editor"><h3>Saved Skill / Role Taxonomy</h3><p>Your persistent configuration is used by the local charts and print template. Training examples are illustrative and require review; they do not establish career readiness.</p>
+ {loading&&<p role="status">Loading saved taxonomy…</p>}{error&&<div className="error-message" role="alert">{error} <button className="btn btn-secondary" onClick={load}>Retry</button></div>}
+ {data&&<div className="taxonomy-grid">{['role','skill'].map(kind=><div key={kind}><div className="section-header"><h4>{kind==='role'?'Roles':'Skills'} ({data[kind+'s'].length})</h4><button className="btn btn-primary" onClick={()=>{setModalError('');setForm({kind,item:null});}}>Add {kind}</button></div><div className="table-container"><table><thead><tr><th>{kind==='role'?'Role':'Skill'}</th><th>Type</th><th>Actions</th></tr></thead><tbody>{data[kind+'s'].map(row=><tr key={row.id}><td>{row.title||row.name}</td><td>{row.is_demo?'Training example':'Saved configuration'}</td><td><button className="btn btn-secondary" onClick={()=>open(kind,row.id)}>Details</button></td></tr>)}</tbody></table></div></div>)}</div>}
+ {selected&&!form&&!deleting&&<DetailModal title={selected.kind==='role'?'Saved role':'Saved skill'} item={selected.item} fields={selected.kind==='role'?roleFields:skillFields} onClose={close} onEdit={()=>{setModalError('');setForm(selected);}} onDelete={()=>setDeleting(true)}/>}
+ {form&&<FormModal title={form.kind==='role'?'role':'skill'} item={form.item} fields={form.kind==='role'?roleFields:skillFields} onClose={close} onSave={save} saving={saving} error={modalError}/>}
+ {deleting&&<div className="modal-overlay"><div className="modal-content" role="dialog" aria-modal="true" aria-label="Delete taxonomy item"><div className="modal-header"><h2>Delete saved {selected.kind}?</h2></div><div className="modal-body"><p>This removes your configuration for {selected.item.title||selected.item.name}. Existing completed AI reports remain unchanged.</p>{modalError&&<div className="error-message" role="alert">{modalError}</div>}</div><div className="modal-actions"><button className="btn btn-danger" disabled={saving} onClick={remove}>{saving?'Deleting…':'Delete'}</button><button className="btn btn-secondary" disabled={saving} onClick={close}>Cancel</button></div></div></div>}
+ </section>;
 }
-
-const card = { background: '#1f2937', padding: 16, borderRadius: 12, border: '1px solid #334155', marginBottom: 16, color: '#f1f5f9' };
-const h3 = { margin: '0 0 6px 0', color: '#f1f5f9' };
-const muted = { color: '#94a3b8', marginTop: 0, fontSize: 13 };
-const row = { display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' };
-const inp = { padding: 6, borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', flex: 1, minWidth: 120 };
-const btn = { padding: '6px 12px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer' };
-const miniBtn = { padding: '3px 8px', fontSize: 11, borderRadius: 4, background: '#475569', color: '#fff', border: 'none', cursor: 'pointer' };
-const miniDel = { padding: '3px 8px', fontSize: 11, borderRadius: 4, background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer' };
-const pane = { background: '#0f172a', padding: 10, borderRadius: 8, border: '1px solid #334155', maxHeight: 360, overflowY: 'auto' };
-const paneH = { color: '#cbd5e1', margin: '0 0 6px 0' };
-const list = { listStyle: 'none', margin: 0, padding: 0 };
-const li = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #1e293b' };
-const errBox = { marginTop: 10, padding: 10, background: '#7f1d1d', color: '#fee2e2', borderRadius: 8 };

@@ -1,20 +1,4 @@
-import React, { useState } from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import api from '../services/api';
-
-export default function ApplicationDeadlineRisk() {
-  const [payload, setPayload] = useState(JSON.stringify({ applications: [
-    { school: 'State University', due_in_days: 12, essays_done: 1, essays_total: 3, fafsa_done: false, recommendation_done: true },
-    { school: 'Metro Tech', due_in_days: 28, essays_done: 2, essays_total: 2, fafsa_done: true, recommendation_done: false }
-  ] }, null, 2));
-  const [result, setResult] = useState(null);
-  const run = async () => setResult((await api.post('/application-deadline-risk/score', JSON.parse(payload))).data);
-  return (
-    <div className="page">
-      <h1>Application Deadline Risk</h1>
-      <p>Prioritize college and scholarship application work by deadline, essays, FAFSA, and recommendation gaps.</p>
-      <textarea className="form-control" rows={14} value={payload} onChange={(event) => setPayload(event.target.value)} />
-      <button className="btn btn-primary" onClick={run}>Score Applications</button>
-      {result && <div className="card"><h2>{result.urgentCount} urgent</h2>{result.applications.map((row) => <p key={row.school}>{row.school}: {row.tier} · {row.action}</p>)}</div>}
-    </div>
-  );
-}
+const examples=['Short deadline','Two applications','Longer planning window'].map((label,index)=>({label,values:{applications:[{school:`Fictional training application ${index+1}`,due_in_days:[7,14,28][index],essays_done:0,essays_total:[2,3,1][index],fafsa_done:false,recommendation_done:false}]}}));
+export default function ApplicationDeadlineRisk(){const [payload,setPayload]=useState(''),[result,setResult]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);const active=useRef(null);useEffect(()=>()=>active.current?.abort(),[]);const run=async()=>{if(busy)return;const controller=new AbortController();active.current=controller;setBusy(true);setError('');setResult(null);try{const values=JSON.parse(payload);if(!Array.isArray(values.applications))throw new Error('Provide an applications array.');const {data}=await api.post('/application-deadline-risk/score',values,{signal:controller.signal});if(!controller.signal.aborted)setResult(data);}catch(err){if(!controller.signal.aborted)setError(err.response?.data?.error||err.message);}finally{if(active.current===controller){active.current=null;setBusy(false);}}};return <section className="feature-page"><h1>Application Deadline Risk</h1><p>Local deadline calculator. This does not call AI or verify an application, FAFSA, or recommendation.</p><div className="career-action-row">{examples.map(example=><button className="btn btn-secondary" key={example.label} disabled={busy} onClick={()=>setPayload(JSON.stringify(example.values,null,2))}>Demo calculator · {example.label}</button>)}</div><div className="form-group"><label htmlFor="deadline-input">Application planning inputs</label><textarea id="deadline-input" rows={12} value={payload} disabled={busy} onChange={event=>setPayload(event.target.value)}/></div><div className="career-action-row"><button className="btn btn-primary" disabled={busy||!payload.trim()} onClick={run}>{busy?'Calculating…':'Score applications'}</button><button className="btn btn-secondary" disabled={!busy} onClick={()=>{active.current?.abort();active.current=null;setBusy(false);}}>Cancel</button></div>{error&&<div role="alert" className="error-message">{error}<button className="btn" onClick={run}>Retry</button></div>}{result&&<section><h2>{result.urgentCount} urgent</h2>{result.applications.map((row,index)=><p key={index}>{row.school}: {row.tier} · {row.action}</p>)}</section>}</section>;}

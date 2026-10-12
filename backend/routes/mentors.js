@@ -27,7 +27,7 @@ router.get('/', authenticateToken, async (req, res) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -82,7 +82,7 @@ router.get('/match', authenticateToken, async (req, res) => {
 
     res.json({ data: scored, query: { interests, skills } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -93,7 +93,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -116,7 +116,7 @@ router.post('/', authenticateToken,
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.status || 500).json({ error: err.message });
     }
   }
 );
@@ -132,7 +132,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -143,7 +143,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -157,7 +157,7 @@ router.post('/ai-match', authenticateToken, aiRateLimiter, async (req, res) => {
     ]);
     res.json({ match: aiResponse });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

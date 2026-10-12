@@ -24,51 +24,51 @@ api.interceptors.response.use(
 
 // ---- New AI features ----
 export const aiApi = {
-  careerMatch: (payload) => api.post('/ai/career-match', payload),
-  salaryNegotiation: (payload) => api.post('/ai/salary-negotiation', payload),
-  scholarshipEligibility: (payload) => api.post('/ai/scholarship-eligibility', payload),
-  personalizedRoadmap: (payload) => api.post('/ai/personalized-roadmap', payload),
-  peerMentorMatch: (payload) => api.post('/ai/peer-mentor-match', payload),
-  companyCultureFit: (payload) => api.post('/ai/company-culture-fit', payload),
+  careerMatch: (payload, config) => api.post('/ai/career-match', payload, config),
+  salaryNegotiation: (payload, config) => api.post('/ai/salary-negotiation', payload, config),
+  scholarshipEligibility: (payload, config) => api.post('/ai/scholarship-eligibility', payload, config),
+  personalizedRoadmap: (payload, config) => api.post('/ai/personalized-roadmap', payload, config),
+  peerMentorMatch: (payload, config) => api.post('/ai/peer-mentor-match', payload, config),
+  companyCultureFit: (payload, config) => api.post('/ai/company-culture-fit', payload, config),
   results: (page = 1, limit = 20, endpoint) => api.get('/ai/results', { params: { page, limit, endpoint } }),
-  feedback: (payload) => api.post('/ai/feedback', payload),
+  feedback: (payload, config) => api.post('/ai/feedback', payload, config),
 };
 
 // ---- Conversations ----
 export const conversationsApi = {
   list: (page = 1, limit = 20) => api.get(`/conversations?page=${page}&limit=${limit}`),
-  create: (payload) => api.post('/conversations', payload),
+  create: (payload, config) => api.post('/conversations', payload, config),
   getMessages: (id, page = 1, limit = 50) => api.get(`/conversations/${id}/messages?page=${page}&limit=${limit}`),
-  addMessage: (id, payload) => api.post(`/conversations/${id}/messages`, payload),
+  addMessage: (id, payload) => api.post(`/conversations/${id}/messages`, payload, config),
   delete: (id) => api.delete(`/conversations/${id}`),
 };
 
 // ---- Resumes (extended AI) ----
 export const resumesApi = {
-  enhance: (id, payload) => api.post(`/resumes/${id}/enhance`, payload),
-  generateBullets: (payload) => api.post('/resumes/bullet-generator', payload),
+  enhance: (id, payload) => api.post(`/resumes/${id}/enhance`, payload, config),
+  generateBullets: (payload, config) => api.post('/resumes/bullet-generator', payload, config),
 };
 
 // ---- Interview prep (extended AI) ----
 export const interviewApi = {
-  generateQuestions: (payload) => api.post('/interview-prep/generate-questions', payload),
-  evaluateAnswer: (payload) => api.post('/interview-prep/evaluate-answer', payload),
+  generateQuestions: (payload, config) => api.post('/interview-prep/generate-questions', payload, config),
+  evaluateAnswer: (payload, config) => api.post('/interview-prep/evaluate-answer', payload, config),
 };
 
 // ---- Mentors (matching) ----
 export const mentorsApi = {
   match: (interests, skills) => api.get(`/mentors/match?interests=${encodeURIComponent(interests || '')}&skills=${encodeURIComponent(skills || '')}`),
-  aiMatch: (payload) => api.post('/mentors/ai-match', payload),
+  aiMatch: (payload, config) => api.post('/mentors/ai-match', payload, config),
 };
 
 // ---- Learning Roadmaps ----
 export const roadmapsApi = {
-  aiGenerate: (payload) => api.post('/learning-roadmaps/ai-generate', payload),
+  aiGenerate: (payload, config) => api.post('/learning-roadmaps/ai-generate', payload, config),
 };
 
 // ---- Career Chat ----
 export const chatApi = {
-  send: (payload) => api.post('/career-chat', payload),
+  send: (payload, config) => api.post('/career-chat', payload, config),
 };
 
 export default api;

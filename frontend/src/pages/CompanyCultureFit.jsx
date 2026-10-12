@@ -17,7 +17,7 @@ export default function CompanyCultureFit() {
           rows: 8,
           placeholder: '{ "name": "Acme Co", "size": "200-500", "values_page": "...", "glassdoor_themes": ["fast-paced", "siloed"], "interview_signals": ["panel asked about late nights"], "benefits": ["unlimited PTO"], "leadership": "founder-led" }' },
       ]}
-      onSubmit={async (data) => (await aiApi.companyCultureFit(data)).data}
+      onSubmit={async (data, config) => (await aiApi.companyCultureFit(data, config)).data}
       renderResult={(r) => (
         <div className="ai-response-container">
           <div className="ai-response-header">
