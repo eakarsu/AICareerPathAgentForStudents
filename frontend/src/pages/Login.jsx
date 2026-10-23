@@ -26,14 +26,23 @@ export default function Login({ onLogin }) {
     setLoading(false);
   };
 
-  const demoEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_CREDENTIAL_AUTOFILL === 'true' && Boolean(import.meta.env.VITE_DEMO_EMAIL && import.meta.env.VITE_DEMO_PASSWORD);
+  const demoEnabled = Boolean(import.meta.env.VITE_DEMO_EMAIL && import.meta.env.VITE_DEMO_PASSWORD);
 
-  const fillDemo = () => {
-    if (!demoEnabled || loading) return;
-    setError('');
-    setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
-    setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
-    setIsRegister(false);
+  const fillDemo = async () => {
+    if (loading) return;
+    if (import.meta.env.VITE_DEMO_EMAIL && import.meta.env.VITE_DEMO_PASSWORD) {
+      setError('');
+      setEmail(import.meta.env.VITE_DEMO_EMAIL);
+      setPassword(import.meta.env.VITE_DEMO_PASSWORD);
+      setIsRegister(false);
+      return;
+    }
+    try {
+      const res = await fetch('/api/auth/demo-credentials', { cache: 'no-store' });
+      const data = await res.json().catch(() => ({}));
+      if (data.email && data.password) { setError(''); setEmail(data.email); setPassword(data.password); setIsRegister(false); return; }
+    } catch {}
+    setError('Demo credentials are not configured for this environment.');
   };
 
   const loginDemo = async () => {
@@ -135,8 +144,7 @@ export default function Login({ onLogin }) {
             <button type="button" className="btn btn-demo" disabled={!demoEnabled || loading} onClick={loginDemo}>
               Log In as Demo
             </button>
-            <button type="button" className="btn btn-secondary btn-full" disabled={!demoEnabled || loading} onClick={fillDemo}>Fill credentials</button>
-            {!demoEnabled && <p className="login-subtitle">Demo credentials are unavailable. Use your existing account.</p>}
+            <button type="button" aria-label="Fill demo credentials" className="btn btn-secondary btn-full" disabled={loading} onClick={fillDemo}>Fill demo credentials</button>
             <div className="login-switch">
               {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button disabled={loading} onClick={() => setIsRegister(!isRegister)}>

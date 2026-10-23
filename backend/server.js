@@ -45,6 +45,7 @@ app.use('/api/career-followups',require('./routes/careerFollowups'));
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/career-paths', require('./routes/careerPaths'));
+app.use('/api/feature-pack', require('./routes/featurePack29a'));
 app.use('/api/skills', require('./routes/skills'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/job-trends', require('./routes/jobTrends'));

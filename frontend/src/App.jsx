@@ -30,6 +30,7 @@ import Webhooks from './pages/Webhooks';
 import CustomViewsPage from './pages/CustomViewsPage';
 import Layout from './components/Layout';
 import CareerPlanningTools from './pages/CareerPlanningTools';
+import FeaturePack29a from './pages/FeaturePack29a';
 
 import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
 import CodexOperationsFeature from './pages/CodexOperationsFeature';
@@ -69,6 +70,7 @@ function App() {
 
         <Route path="/" element={<Dashboard />} />
         <Route path="/career-paths" element={<CareerPaths />} />
+        <Route path="/feature-pack" element={<FeaturePack29a />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/job-trends" element={<JobTrends />} />
